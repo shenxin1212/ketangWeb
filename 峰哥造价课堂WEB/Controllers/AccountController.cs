@@ -11,10 +11,12 @@ namespace 峰哥造价课堂WEB.Controllers
     public class AccountController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public AccountController(ApplicationDbContext context)
+        public AccountController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration; 
         }
 
         [HttpGet]
@@ -79,11 +81,26 @@ namespace 峰哥造价课堂WEB.Controllers
 
         // 微信登录入口
         [HttpGet]
-        public IActionResult WeChatLogin()
+        public IActionResult WeChatLogin(string returnUrl = "/")
         {
-            // 这里可以重定向到微信OAuth或显示二维码
-            // 暂时重定向到普通登录页
-            return RedirectToAction("Login");
+            // 从配置文件读取微信参数
+            var wechatConfig = _configuration.GetSection("WeChat");
+            var appId = wechatConfig["AppId"];
+            var redirectUri = $"{wechatConfig["RedirectUri"]}/WeChatAuth/Callback"; // 回调地址需与微信开放平台配置一致
+
+            // 对回调地址进行 URL 编码
+            var encodedRedirectUri = System.Web.HttpUtility.UrlEncode(redirectUri);
+
+            // 构造微信扫码登录链接（PC端用 snsapi_login）
+            var authUrl = $"https://open.weixin.qq.com/connect/qrconnect" +
+                          $"?appid={appId}" +
+                          $"&redirect_uri={encodedRedirectUri}" +
+                          $"&response_type=code" +
+                          $"&scope=snsapi_login" +
+                          $"&state={returnUrl}#wechat_redirect";
+
+            // 重定向到微信扫码页面
+            return Redirect(authUrl);
         }
     }
 }
