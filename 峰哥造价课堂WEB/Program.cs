@@ -39,6 +39,16 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("UserOnly", policy => policy.RequireRole("User", "Admin"));
 });
 
+// 添加会话支持
+builder.Services.AddSession(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+// 添加HttpClient
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // 配置HTTP请求管道
@@ -55,6 +65,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// 启用会话
+app.UseSession();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

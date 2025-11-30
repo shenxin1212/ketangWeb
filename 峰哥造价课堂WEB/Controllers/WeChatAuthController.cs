@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
 using 峰哥造价课堂WEB.Data;
 using 峰哥造价课堂WEB.Services;
+using 峰哥造价课堂WEB.Models;
+using Microsoft.AspNetCore.Authentication;
+using System.Web;
 
 namespace 峰哥造价课堂WEB.Controllers
 {
@@ -12,40 +13,79 @@ namespace 峰哥造价课堂WEB.Controllers
     {
         private readonly IWeChatAuthService _weChatAuthService;
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public WeChatAuthController(IWeChatAuthService weChatAuthService, ApplicationDbContext context)
+        public WeChatAuthController(
+            IWeChatAuthService weChatAuthService,
+            ApplicationDbContext context,
+            IConfiguration configuration)
         {
             _weChatAuthService = weChatAuthService;
             _context = context;
+            _configuration = configuration;
         }
 
+        /// <summary>
+        /// 微信登录入口 - 生成微信授权链接
+        /// </summary>
         [HttpGet]
         public IActionResult Login()
         {
-            // 重定向到微信OAuth页面或显示二维码
-            return View();
+            try
+            {
+                var appId = _configuration["WeChat:AppId"];
+                var redirectUri = HttpUtility.UrlEncode($"{_configuration["WeChat:RedirectUri"]}/WeChatAuth/Callback");
+                var scope = "snsapi_login"; // 网页授权类型
+                var state = Guid.NewGuid().ToString("N"); // 随机状态值，用于防CSRF
+
+                // 存储state到会话，用于回调验证
+                HttpContext.Session.SetString("WeChatAuthState", state);
+
+                // 构建微信授权链接
+                var authUrl = $"https://open.weixin.qq.com/connect/qrconnect" +
+                             $"?appid={appId}" +
+                             $"&redirect_uri={redirectUri}" +
+                             $"&response_type=code" +
+                             $"&scope={scope}" +
+                             $"&state={state}#wechat_redirect";
+
+                return Redirect(authUrl);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"登录准备失败: {ex.Message}";
+                return RedirectToAction("Login", "Account");
+            }
         }
 
+        /// <summary>
+        /// 微信授权回调处理
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> Callback(string code)
+        public async Task<IActionResult> Callback(string code, string state)
         {
-            if (string.IsNullOrEmpty(code))
+            // 验证state防止CSRF攻击
+            var sessionState = HttpContext.Session.GetString("WeChatAuthState");
+            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state) || state != sessionState)
             {
-                return RedirectToAction("Login", new { error = "授权失败" });
+                TempData["ErrorMessage"] = "授权验证失败";
+                return RedirectToAction("Login", "Account");
             }
 
             try
             {
+                // 通过code获取用户信息并认证
                 var user = await _weChatAuthService.AuthenticateAsync(code);
                 if (user == null)
                 {
-                    return RedirectToAction("Login", new { error = "用户认证失败" });
+                    TempData["ErrorMessage"] = "用户信息获取失败";
+                    return RedirectToAction("Login", "Account");
                 }
 
                 // 生成认证token
                 var authToken = await _weChatAuthService.GenerateAuthTokenAsync(user);
 
-                // 创建Claims身份
+                // 创建用户身份标识
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, user.UserName),
@@ -56,93 +96,35 @@ namespace 峰哥造价课堂WEB.Controllers
                     new Claim("Nickname", user.Nickname)
                 };
 
+                // 登录用户
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(claimsIdentity));
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity),
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = true,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+                    });
 
+                // 登录成功跳转到首页
                 return RedirectToAction("Index", "Home");
             }
             catch (Exception ex)
             {
-                return RedirectToAction("Login", new { error = $"登录失败: {ex.Message}" });
+                TempData["ErrorMessage"] = $"登录失败: {ex.Message}";
+                return RedirectToAction("Login", "Account");
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> TokenLogin(string authToken)
-        {
-            // 用于其他系统传递token直接登录
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.AuthToken == authToken &&
-                                         u.TokenExpiry > DateTime.Now &&
-                                         u.Status == 1);
-
-            if (user != null)
-            {
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(ClaimTypes.Role, user.Role),
-                    new Claim("OpenId", user.OpenId),
-                    new Claim("UserId", user.Id.ToString()),
-                    new Claim("Nickname", user.Nickname)
-                };
-
-                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(claimsIdentity));
-
-                return Json(new { success = true, message = "登录成功" });
-            }
-
-            return Json(new { success = false, message = "Token无效或已过期" });
-        }
-
+        /// <summary>
+        /// 退出登录
+        /// </summary>
+        [HttpGet]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Index", "Home");
-        }
-
-        // 简化版微信登录 - 用于测试
-        [HttpPost]
-        public async Task<IActionResult> SimulateWeChatLogin(string openId, string nickname, string avatar = "")
-        {
-            try
-            {
-                var user = await _weChatAuthService.GetUserByOpenIdAsync(openId);
-                if (user == null)
-                {
-                    // 创建新用户
-                    user = await _weChatAuthService.CreateOrUpdateUserAsync(
-                        openId,
-                        $"unionid_{openId}",
-                        nickname,
-                        avatar);
-                }
-
-                var authToken = await _weChatAuthService.GenerateAuthTokenAsync(user);
-
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(ClaimTypes.Role, user.Role),
-                    new Claim("OpenId", user.OpenId),
-                    new Claim("AuthToken", authToken),
-                    new Claim("UserId", user.Id.ToString()),
-                    new Claim("Nickname", user.Nickname)
-                };
-
-                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(claimsIdentity));
-
-                return Json(new { success = true, message = "微信登录成功", user = new { user.UserName, user.Nickname, user.Role } });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = $"登录失败: {ex.Message}" });
-            }
         }
     }
 }

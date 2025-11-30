@@ -11,10 +11,12 @@ namespace 峰哥造价课堂WEB.Controllers
     public class AccountController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public AccountController(ApplicationDbContext context)
+        public AccountController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration; 
         }
 
         [HttpGet]
@@ -81,9 +83,8 @@ namespace 峰哥造价课堂WEB.Controllers
         [HttpGet]
         public IActionResult WeChatLogin()
         {
-            // 这里可以重定向到微信OAuth或显示二维码
-            // 暂时重定向到普通登录页
-            return RedirectToAction("Login");
+            // 重定向到微信授权控制器
+            return RedirectToAction("Login", "WeChatAuth");
         }
     }
 }
