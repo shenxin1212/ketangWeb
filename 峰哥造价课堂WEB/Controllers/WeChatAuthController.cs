@@ -62,58 +62,51 @@ namespace 峰哥造价课堂WEB.Controllers
         /// 微信授权回调处理
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> Callback(string code, string state)
+        public async Task<IActionResult> Callback(string code)
         {
-            // 验证state防止CSRF攻击
-            var sessionState = HttpContext.Session.GetString("WeChatAuthState");
-            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state) || state != sessionState)
+            if (string.IsNullOrEmpty(code))
             {
-                TempData["ErrorMessage"] = "授权验证失败";
-                return RedirectToAction("Login", "Account");
+                return RedirectToAction("Login", new { error = "授权失败" });
             }
 
             try
             {
-                // 通过code获取用户信息并认证
                 var user = await _weChatAuthService.AuthenticateAsync(code);
                 if (user == null)
                 {
-                    TempData["ErrorMessage"] = "用户信息获取失败";
-                    return RedirectToAction("Login", "Account");
+                    return RedirectToAction("Login", new { error = "用户认证失败" });
                 }
 
                 // 生成认证token
                 var authToken = await _weChatAuthService.GenerateAuthTokenAsync(user);
 
-                // 创建用户身份标识
+                // 创建Claims身份
                 var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(ClaimTypes.Role, user.Role),
-                    new Claim("OpenId", user.OpenId),
-                    new Claim("AuthToken", authToken),
-                    new Claim("UserId", user.Id.ToString()),
-                    new Claim("Nickname", user.Nickname)
-                };
+        {
+            new Claim(ClaimTypes.Name, string.IsNullOrEmpty(user.UserName) ? user.SafeNickname : user.UserName),
+            new Claim(ClaimTypes.Role, string.IsNullOrEmpty(user.Role) ? "Pending" : user.Role),
+            new Claim("OpenId", user.OpenId),
+            new Claim("AuthToken", authToken),
+            new Claim("UserId", user.Id.ToString()),
+            new Claim("Nickname", user.Nickname)
+        };
 
-                // 登录用户
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(claimsIdentity),
-                    new AuthenticationProperties
-                    {
-                        IsPersistent = true,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
-                    });
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity));
 
-                // 登录成功跳转到首页
+                // 检查是否需要完善信息（UserName、Role、IsActive为空）
+                if (string.IsNullOrEmpty(user.UserName) || string.IsNullOrEmpty(user.Role) || !user.IsActive)
+                {
+                    // 重定向到完善信息页面
+                    return RedirectToAction("CompleteProfile", "Account");
+                }
+
                 return RedirectToAction("Index", "Home");
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"登录失败: {ex.Message}";
-                return RedirectToAction("Login", "Account");
+                return RedirectToAction("Login", new { error = $"登录失败: {ex.Message}" });
             }
         }
 

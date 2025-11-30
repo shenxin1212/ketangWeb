@@ -1,0 +1,45 @@
+﻿@model 峰哥造价课堂WEB.Models.User
+
+@{
+    ViewData["Title"] = "完善个人信息";
+}
+
+<h2>完善个人信息</h2>
+<p>请填写以下信息以完成注册</p>
+
+<form asp-action="CompleteProfile">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="form-group">
+        <label asp-for="UserName"></label>
+        <input asp-for="UserName" class="form-control" required />
+        <span asp-validation-for="UserName" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Role"></label>
+        <select asp-for="Role" class="form-control" required>
+            <option value="">请选择角色</option>
+            <option value="User">普通用户</option>
+            <option value="VIP">VIP用户</option>
+            <!-- 可根据实际需求添加更多角色 -->
+        </select>
+        <span asp-validation-for="Role" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="password">设置密码 (可选)</label>
+        <input type="password" id="password" name="password" class="form-control" />
+        <small class="text-muted">设置后可使用账号密码登录</small>
+    </div>
+
+    <div class="form-group">
+        <input type="submit" value="提交" class="btn btn-primary" />
+    </div>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

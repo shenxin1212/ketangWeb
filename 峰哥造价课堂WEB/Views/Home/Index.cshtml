@@ -3,8 +3,7 @@
 }
 
 <div class="text-center mb-5">
-    <h1 class="display-4">欢迎使用视频管理系统</h1>
-    <p class="lead">基于权限的视频观看和文件下载平台</p>
+    <h1 class="display-4">峰哥造价课堂</h1>
 </div>
 
 <!-- 调试信息 -->
@@ -19,10 +18,34 @@
 {
     <div class="alert alert-info text-center">
         <h5>请先登录系统</h5>
-        <p>不同权限的用户可以访问不同的内容</p>
         <a class="btn btn-primary" asp-controller="Account" asp-action="Login">立即登录</a>
     </div>
 }
+
+<div class="public-download-section" style="margin: 30px 0; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+    <h2>推荐应用程序</h2>
+    @if (ViewBag.PublicDownloads != null && ViewBag.PublicDownloads.Count > 0)
+    {
+        foreach (var file in ViewBag.PublicDownloads)
+        {
+            <div class="public-download-item">
+                <h4>@file.FileName v@file.Version</h4>
+                <p>@file.Description</p>
+                <p>
+                    <small>文件大小：@(file.FileSize / 1024 / 1024)MB | 上传时间：@file.UploadDate.ToString("yyyy-MM-dd")</small>
+                </p>
+                <!-- 下载按钮（无需登录） -->
+                <a href="/Download/Download?id=@file.Id" class="btn btn-primary">
+                    立即下载
+                </a>
+            </div>
+        }
+    }
+    else
+    {
+        <p>暂无推荐应用程序</p>
+    }
+</div>
 
 <div class="row">
     <div class="col-md-8">

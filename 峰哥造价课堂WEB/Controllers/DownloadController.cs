@@ -7,7 +7,6 @@ using 峰哥造价课堂WEB.Services;
 
 namespace 峰哥造价课堂WEB.Controllers
 {
-    [Authorize]
     public class DownloadController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -114,7 +113,7 @@ namespace 峰哥造价课堂WEB.Controllers
                     return NotFound();
                 }
 
-                // 检查权限
+                // 权限检查：Guest 角色也能下载标记为 Guest 的文件
                 var currentUserRole = _authService.GetCurrentUserRole();
                 if (!CanUserAccessFile(currentUserRole, file.RequiredRole))
                 {

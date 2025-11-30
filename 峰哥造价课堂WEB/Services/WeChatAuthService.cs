@@ -81,6 +81,7 @@ namespace 峰哥造价课堂WEB.Services
                 .FirstOrDefaultAsync(u => u.OpenId == openId && u.Status == 1);
         }
 
+
         public async Task<User> CreateOrUpdateUserAsync(string openId, string unionId, string nickname, string avatar)
         {
             var user = await GetUserByOpenIdAsync(openId);
@@ -94,10 +95,11 @@ namespace 峰哥造价课堂WEB.Services
                     UnionId = unionId,
                     Nickname = nickname,
                     Avatar = avatar,
-                    UserName = $"wx_{GenerateRandomString(8)}", // 生成唯一用户名
-                    Role = "User", // 默认角色
+                    UserName = string.Empty, // 生成唯一用户名
+                    Role = string.Empty, // 默认角色
                     Status = 1,
-                    IsActive = true,
+                    IsActive = false,
+                    PasswordHash = string.Empty,
                     CreateTime = DateTime.Now,
                     UpdateTime = DateTime.Now
                 };
@@ -116,7 +118,6 @@ namespace 峰哥造价课堂WEB.Services
             await _context.SaveChangesAsync();
             return user;
         }
-
         public async Task<string> GenerateAuthTokenAsync(User user)
         {
             var token = Guid.NewGuid().ToString() + DateTime.Now.Ticks;
