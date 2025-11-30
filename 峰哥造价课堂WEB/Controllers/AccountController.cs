@@ -81,7 +81,7 @@ namespace 峰哥造价课堂WEB.Controllers
 
         // 微信登录入口
         [HttpGet]
-        public IActionResult WeChatLogin()
+        public IActionResult WeChatLogin(string returnUrl = "/")
         {
             // 重定向到微信授权控制器
             return RedirectToAction("Login", "WeChatAuth");
