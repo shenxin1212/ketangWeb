@@ -1,0 +1,79 @@
+﻿@model List<峰哥造价课堂WEB.Models.DownloadFile>
+@{
+    ViewData["Title"] = "文件下载";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-download"></i> 文件下载</h2>
+    @if (ViewBag.CanUpload)
+    {
+        <a class="btn btn-success" asp-action="Upload">
+            <i class="fas fa-upload"></i> 上传文件
+        </a>
+    }
+</div>
+
+@if (Model.Any())
+{
+    <div class="row">
+        @foreach (var file in Model)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">@file.FileName</h5>
+                            <span class="badge bg-info">@file.FileType.ToUpper()</span>
+                        </div>
+
+                        <p class="card-text">@file.Description</p>
+
+                        <div class="mb-3">
+                            <span class="badge bg-@(file.RequiredRole == "Guest" ? "success" : file.RequiredRole == "User" ? "warning" : "danger")">
+                                @(file.RequiredRole == "Guest" ? "公开" : file.RequiredRole == "User" ? "会员" : "管理员")
+                            </span>
+                            <small class="text-muted">版本: @file.Version</small>
+                        </div>
+
+                        <div class="file-info mb-3">
+                            <div class="row text-muted small">
+                                <div class="col-6">
+                                    <i class="fas fa-hdd"></i> 大小: @(file.FileSize / 1024 / 1024) MB
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas fa-download"></i> 下载: @file.DownloadCount 次
+                                </div>
+                            </div>
+                            <div class="text-muted small">
+                                <i class="fas fa-calendar"></i> 上传: @file.UploadDate.ToString("yyyy-MM-dd HH:mm")
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a asp-action="Download" asp-route-id="@file.Id" class="btn btn-primary">
+                                <i class="fas fa-download"></i> 下载文件
+                            </a>
+
+                            @if (ViewBag.CanUpload)
+                            {
+                                <form asp-action="Delete" method="post" onsubmit="return confirm('确定要删除这个文件吗？');">
+                                    <input type="hidden" name="id" value="@file.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash"></i> 删除文件
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h5>暂无文件</h5>
+        <p>当前没有可下载的文件。</p>
+    </div>
+}

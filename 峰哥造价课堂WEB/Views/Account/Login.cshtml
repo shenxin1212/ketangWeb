@@ -1,0 +1,48 @@
+﻿@{
+    ViewData["Title"] = "用户登录";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-sign-in-alt"></i> 用户登录</h4>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">登录</button>
+                </form>
+
+                <hr>
+                <h6>测试账户:</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <small><strong>管理员</strong><br>admin / admin123</small>
+                    </div>
+                    <div class="col-md-6">
+                        <small><strong>普通用户</strong><br>user1 / user123</small>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="#" class="btn btn-success">
+                        <i class="fab fa-weixin"></i> 微信登录
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

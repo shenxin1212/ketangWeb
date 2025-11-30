@@ -1,0 +1,55 @@
+﻿@model 峰哥造价课堂WEB.Models.Video
+@{
+    ViewData["Title"] = "上传视频";
+}
+
+<h2><i class="fas fa-upload"></i> 上传视频</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+
+                <form asp-action="Upload" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label">视频标题</label>
+                        <input asp-for="Title" class="form-control" required>
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">视频描述</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">视频文件</label>
+                        <input type="file" name="videoFile" class="form-control" accept="video/*" required>
+                        <div class="form-text">支持 MP4, AVI, MOV, WMV 格式</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="RequiredRole" class="form-label">观看权限</label>
+                        <select asp-for="RequiredRole" class="form-select">
+                            <option value="Guest">所有用户</option>
+                            <option value="User">注册用户</option>
+                            <option value="Admin">仅管理员</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input asp-for="IsPublic" class="form-check-input">
+                        <label asp-for="IsPublic" class="form-check-label">设为公开视频</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">上传视频</button>
+                    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

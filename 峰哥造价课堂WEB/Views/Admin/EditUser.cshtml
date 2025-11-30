@@ -1,0 +1,111 @@
+﻿@model 峰哥造价课堂WEB.Models.User
+@{
+    ViewData["Title"] = "编辑用户";
+}
+
+<h2><i class="fas fa-edit"></i> 编辑用户</h2>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="EditUser" method="post">
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="mb-3">
+                        <label asp-for="UserName" class="form-label">用户名</label>
+                        <input asp-for="UserName" class="form-control" required>
+                        <span asp-validation-for="UserName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Nickname" class="form-label">昵称</label>
+                        <input asp-for="Nickname" class="form-control">
+                        <span asp-validation-for="Nickname" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Mobile" class="form-label">手机号</label>
+                        <input asp-for="Mobile" class="form-control">
+                        <span asp-validation-for="Mobile" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label">角色</label>
+                        <select asp-for="Role" class="form-select">
+                            <option value="User">普通用户</option>
+                            <option value="Admin">管理员</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input asp-for="IsActive" class="form-check-input">
+                        <label asp-for="IsActive" class="form-check-label">用户状态（启用/禁用）</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">OpenID</label>
+                        <input asp-for="OpenId" class="form-control" readonly>
+                        <small class="form-text text-muted">微信OpenID，不可修改</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">注册时间</label>
+                        <input value="@Model.CreateTime.ToString("yyyy-MM-dd HH:mm:ss")" class="form-control" readonly>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                        <a asp-action="Users" class="btn btn-secondary">返回列表</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">用户信息</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">用户ID:</dt>
+                    <dd class="col-sm-8">@Model.Id</dd>
+
+                    <dt class="col-sm-4">UnionID:</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.UnionId) ? "未设置" : Model.UnionId)</dd>
+
+                    <dt class="col-sm-4">头像:</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.Avatar))
+                        {
+                            <img src="@Model.Avatar" alt="头像" class="img-thumbnail" style="max-width: 80px;">
+                        }
+                        else
+                        {
+                            <span class="text-muted">未设置</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">最后更新:</dt>
+                    <dd class="col-sm-8">@Model.UpdateTime.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+
+                    <dt class="col-sm-4">状态码:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-@(Model.Status == 1 ? "success" : "danger")">
+                            @Model.Status
+                        </span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

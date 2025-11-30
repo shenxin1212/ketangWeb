@@ -1,0 +1,75 @@
+﻿@model List<峰哥造价课堂WEB.Models.Video>
+@{
+    ViewData["Title"] = "视频中心";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-play-circle"></i> 视频中心</h2>
+    @if (ViewBag.CanUpload)
+    {
+        <a class="btn btn-success" asp-action="Upload">
+            <i class="fas fa-upload"></i> 上传视频
+        </a>
+    }
+</div>
+
+@if (Model.Any())
+{
+    <div class="row">
+        @foreach (var video in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card video-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@video.Title</h5>
+                        <p class="card-text">@video.Description</p>
+
+                        <div class="mb-2">
+                            <span class="badge bg-@(video.RequiredRole == "Guest" ? "success" : video.RequiredRole == "User" ? "warning" : "danger")">
+                                @(video.RequiredRole == "Guest" ? "公开" : video.RequiredRole == "User" ? "会员" : "管理员")
+                            </span>
+                            @if (video.IsPublic)
+                            {
+                                <span class="badge bg-info">公开</span>
+                            }
+                        </div>
+
+                        <div class="video-player mb-2">
+                            <video controls style="width: 100%; height: 200px; background: #000;">
+                                <source src="@video.FilePath" type="video/mp4">
+                                您的浏览器不支持视频播放。
+                            </video>
+                        </div>
+
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>@video.FileSize.ToString("N0") bytes</span>
+                            <span>@video.ViewCount 次观看</span>
+                        </div>
+                        <div class="text-muted small">
+                            上传时间: @video.UploadDate.ToString("yyyy-MM-dd HH:mm")
+                        </div>
+                    </div>
+
+                    @if (ViewBag.CanUpload)
+                    {
+                        <div class="card-footer">
+                            <form asp-action="Delete" method="post" onsubmit="return confirm('确定要删除这个视频吗？');">
+                                <input type="hidden" name="id" value="@video.Id" />
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h5>暂无视频</h5>
+        <p>当前没有可观看的视频内容。</p>
+    </div>
+}

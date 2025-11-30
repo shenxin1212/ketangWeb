@@ -1,0 +1,67 @@
+﻿@model 峰哥造价课堂WEB.Models.DownloadFile
+@{
+    ViewData["Title"] = "上传文件";
+}
+
+<h2><i class="fas fa-upload"></i> 上传文件</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+
+                <form asp-action="Upload" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label asp-for="FileName" class="form-label">文件名称</label>
+                        <input asp-for="FileName" class="form-control" required>
+                        <span asp-validation-for="FileName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">文件描述</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">选择文件</label>
+                        <input type="file" name="file" class="form-control" required>
+                        <div class="form-text">支持 EXE, MSI, ZIP, RAR 格式</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="FileType" class="form-label">文件类型</label>
+                        <select asp-for="FileType" class="form-select">
+                            <option value="exe">EXE 可执行文件</option>
+                            <option value="msi">MSI 安装包</option>
+                            <option value="zip">ZIP 压缩包</option>
+                            <option value="rar">RAR 压缩包</option>
+                            <option value="pdf">PDF 文档</option>
+                            <option value="doc">Word 文档</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="RequiredRole" class="form-label">下载权限</label>
+                        <select asp-for="RequiredRole" class="form-select">
+                            <option value="Guest">所有用户</option>
+                            <option value="User">注册用户</option>
+                            <option value="Admin">仅管理员</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Version" class="form-label">版本号</label>
+                        <input asp-for="Version" class="form-control" value="1.0.0">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">上传文件</button>
+                    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

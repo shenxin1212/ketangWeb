@@ -1,0 +1,78 @@
+﻿@{
+    ViewData["Title"] = "微信登录";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white text-center">
+                <h4 class="mb-0"><i class="fab fa-weixin"></i> 微信登录</h4>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <i class="fab fa-weixin fa-5x text-success mb-3"></i>
+                    <h5>请使用微信扫描二维码登录</h5>
+                    <p class="text-muted">或使用测试账号快速登录</p>
+                </div>
+
+                <!-- 模拟微信登录表单 - 用于测试 -->
+                <div class="border p-4 rounded mb-4">
+                    <h6 class="mb-3">测试登录</h6>
+                    <form id="simulateLoginForm">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="openId" placeholder="输入OpenID" value="test_openid_123">
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="nickname" placeholder="输入昵称" value="测试用户">
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fab fa-weixin"></i> 模拟微信登录
+                        </button>
+                    </form>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6>测试说明：</h6>
+                    <small class="text-muted">
+                        在实际环境中，这里会显示微信二维码，用户扫描后会自动跳转。
+                        当前为测试模式，可以模拟微信登录流程。
+                    </small>
+                </div>
+
+                <hr>
+                <div class="text-center">
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-outline-secondary">
+                        <i class="fas fa-sign-in-alt"></i> 返回账号密码登录
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('simulateLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const openId = document.getElementById('openId').value;
+            const nickname = document.getElementById('nickname').value;
+
+            const response = await fetch('@Url.Action("SimulateWeChatLogin")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `openId=${encodeURIComponent(openId)}&nickname=${encodeURIComponent(nickname)}`
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                window.location.href = '@Url.Action("Index", "Home")';
+            } else {
+                alert('登录失败: ' + result.message);
+            }
+        });
+    </script>
+}

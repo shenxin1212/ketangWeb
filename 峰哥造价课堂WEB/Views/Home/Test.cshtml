@@ -1,0 +1,90 @@
+﻿@{
+    ViewData["Title"] = "功能测试";
+}
+
+<h2>功能测试页面</h2>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Bootstrap组件测试</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="testButton()">测试按钮点击</button>
+                    <button class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#testCollapse">
+                        折叠测试
+                    </button>
+                    <div class="collapse mt-2" id="testCollapse">
+                        <div class="card card-body">
+                            折叠内容显示成功！
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>导航测试</h5>
+                </div>
+                <div class="card-body">
+                    <a href="@Url.Action("Index")" class="btn btn-success">首页链接</a>
+                    <a href="@Url.Action("Privacy")" class="btn btn-info">隐私页面</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>JavaScript控制台输出</h5>
+                </div>
+                <div class="card-body">
+                    <div id="consoleOutput" class="bg-dark text-light p-3" style="height: 200px; overflow-y: scroll;">
+                        <!-- 控制台输出将显示在这里 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function log(message) {
+            const output = document.getElementById('consoleOutput');
+            output.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function testButton() {
+            log('按钮点击事件触发成功！');
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            log('页面DOM加载完成');
+            log('Bootstrap: ' + (typeof bootstrap !== 'undefined' ? '已加载' : '未加载'));
+            log('jQuery: ' + (typeof jQuery !== 'undefined' ? '已加载' : '未加载'));
+        });
+
+        // 链接点击事件
+        document.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                log('链接点击: ' + this.href);
+            });
+        });
+
+        // 按钮点击事件
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                log('按钮点击: ' + this.textContent);
+            });
+        });
+    </script>
+}

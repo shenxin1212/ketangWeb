@@ -1,0 +1,147 @@
+﻿@{
+    ViewData["Title"] = "首页";
+}
+
+<div class="text-center mb-5">
+    <h1 class="display-4">欢迎使用视频管理系统</h1>
+    <p class="lead">基于权限的视频观看和文件下载平台</p>
+</div>
+
+<!-- 调试信息 -->
+<div class="alert alert-info d-none" id="debugInfo">
+    <strong>调试信息:</strong>
+    <div>用户: @ViewBag.Username</div>
+    <div>角色: @ViewBag.UserRole</div>
+    <div>用户ID: @ViewBag.UserId</div>
+</div>
+
+@if (!User.Identity.IsAuthenticated)
+{
+    <div class="alert alert-info text-center">
+        <h5>请先登录系统</h5>
+        <p>不同权限的用户可以访问不同的内容</p>
+        <a class="btn btn-primary" asp-controller="Account" asp-action="Login">立即登录</a>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-play-circle"></i> 最新视频</h5>
+                <span class="badge bg-light text-dark">@(ViewBag.Videos?.Count ?? 0) 个视频</span>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.Videos != null && ViewBag.Videos.Count > 0)
+                {
+                    <div class="row">
+                        @foreach (var video in ViewBag.Videos)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <div class="card video-card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">@video.Title</h6>
+                                        <p class="card-text small text-muted">@video.Description</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                <span class="badge bg-@(video.RequiredRole == "Guest" ? "success" : video.RequiredRole == "User" ? "warning" : "danger")">
+                                                    @(video.RequiredRole == "Guest" ? "公开" : video.RequiredRole == "User" ? "会员" : "管理员")
+                                                </span>
+                                            </small>
+                                            <small class="text-muted">@video.UploadDate.ToString("MM-dd")</small>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <a href="@Url.Action("Index", "Video")" class="btn btn-sm btn-outline-primary">查看详情</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">暂无视频内容</p>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <a href="@Url.Action("Index", "Video")" class="btn btn-primary">查看所有视频</a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-download"></i> 热门下载</h5>
+                <span class="badge bg-light text-dark">@(ViewBag.Files?.Count ?? 0) 个文件</span>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.Files != null && ViewBag.Files.Count > 0)
+                {
+                    @foreach (var file in ViewBag.Files)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                            <div>
+                                <h6 class="mb-1">@file.FileName</h6>
+                                <small class="text-muted">@file.DownloadCount 次下载</small>
+                            </div>
+                            <span class="badge bg-info">@file.FileType</span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="fas fa-download fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">暂无下载文件</p>
+                    </div>
+                }
+                <div class="text-center mt-3">
+                    <a class="btn btn-outline-success" asp-controller="Download" asp-action="Index">查看所有文件</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> 系统信息</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>当前用户:</strong> @(User.Identity.IsAuthenticated ? User.Identity.Name : "未登录")</p>
+                <p><strong>用户角色:</strong> <span class="badge bg-secondary">@ViewBag.UserRole</span></p>
+                <p><strong>登录时间:</strong> @DateTime.Now.ToString("yyyy-MM-dd HH:mm")</p>
+                <p><strong>视频数量:</strong> <span class="badge bg-primary">@(ViewBag.Videos?.Count ?? 0)</span></p>
+                <p><strong>文件数量:</strong> <span class="badge bg-success">@(ViewBag.Files?.Count ?? 0)</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // 显示调试信息（在URL中添加?debug=1）
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('debug') === '1') {
+            document.getElementById('debugInfo').classList.remove('d-none');
+        }
+
+        // 确保所有链接都可点击
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('首页加载完成');
+            console.log('用户:', '@ViewBag.Username');
+            console.log('角色:', '@ViewBag.UserRole');
+
+            // 为所有按钮和链接添加点击日志
+            document.querySelectorAll('a, button').forEach(element => {
+                element.addEventListener('click', function(e) {
+                    console.log('点击:', this.textContent.trim(), this.href);
+                });
+            });
+        });
+    </script>
+}
