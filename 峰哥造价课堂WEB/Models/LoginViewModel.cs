@@ -5,11 +5,11 @@ namespace 峰哥造价课堂WEB.Models
 {
     public class LoginViewModel
     {
-        [Required(ErrorMessage = "请输入用户名")]
+        [Required(ErrorMessage = "用户名不能为空")]
         [Display(Name = "用户名")]
-        public string UserName { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "请输入密码")]
+        [Required(ErrorMessage = "密码不能为空")]
         [DataType(DataType.Password)]
         [Display(Name = "密码")]
         public string Password { get; set; } = string.Empty;
