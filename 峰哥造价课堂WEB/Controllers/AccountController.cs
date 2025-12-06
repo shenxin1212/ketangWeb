@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using 峰哥造价课堂WEB.Data;
 using 峰哥造价课堂WEB.Models;
 using 峰哥造价课堂WEB.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace 峰哥造价课堂WEB.Controllers
 {
@@ -49,7 +50,7 @@ namespace 峰哥造价课堂WEB.Controllers
                 {
                     // 记录用户ID用于完善信息页面验证
                     TempData["TempUserId"] = user.Id;
-                    return RedirectToAction("CompleteRegistration");
+                    return RedirectToAction("CompleteInfo");
                 }
             }
 
@@ -103,85 +104,75 @@ namespace 峰哥造价课堂WEB.Controllers
 
             return Redirect(authUrl);
         }
-
-        // 完善信息的提交接口（确保验证失败时返回视图）
-        [HttpPost]
-        public async Task<IActionResult> CompleteInfo(UserInfoViewModel model)
+        [AcceptVerbs("GET", "POST")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CheckUserNameUnique(string userName)
         {
-            if (!ModelState.IsValid)
+            // 空值防护
+            if (string.IsNullOrWhiteSpace(userName))
             {
-                // 验证失败，返回视图并显示错误
-                return View(model);
+                return Json("用户名不能为空");
             }
 
-            // 验证通过，更新用户信息（示例代码）
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.OpenId == model.OpenId);
-            if (user != null)
-            {
-                user.UserName = model.UserName;
-                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
-                user.UpdateTime = DateTime.Now;
-                await _context.SaveChangesAsync();
-            }
+            // 核心：仅检查用户名是否存在（全局唯一，不涉及 OpenId）
+            var exists = await _context.Users
+                .AnyAsync(u => u.UserName == userName);
 
-            return RedirectToAction("Index", "Home");
+            // true=可用，false=已占用
+            return Json(!exists);
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult CompleteInfo(string returnUrl = "/")
         {
-            // 从查询参数或登录中获取 openId（如果需要）
+            // 从查询参数获取 OpenId（登录时传递的）
             var openId = HttpContext.Request.Query["openId"].ToString();
 
-            // 传递 returnUrl 和 openId 到视图，用于表单提交
-            ViewData["ReturnUrl"] = returnUrl;
-            ViewData["OpenId"] = openId;
-
-            // 返回信息完善表单视图
-            return View();
-        }
-
-        // 用户名唯一性验证接口（供Remote特性调用）
-        [AcceptVerbs("GET", "POST")]
-        public async Task<IActionResult> CheckUserNameUnique(string userName, string openId)
-        {
-            // 检查数据库中是否存在相同用户名（排除当前用户自己）
-            var exists = await _context.Users
-                .AnyAsync(u => u.UserName == userName && u.OpenId != openId);
-
-            if (exists)
+            // 初始化 ViewModel，绑定 OpenId（用于后续提交）
+            var model = new UserInfoViewModel
             {
-                return Json(false); // 用户名已存在
-            }
-            return Json(true); // 用户名可用
+                OpenId = openId,
+                ReturnUrl = returnUrl
+            };
+
+            return View(model);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CompleteInfo(UserInfoViewModel model, string returnUrl = "/")
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteInfo(UserInfoViewModel model)
         {
-            if (ModelState.IsValid)
+            // 1. 先验证模型（包含用户名远程验证）
+            if (!ModelState.IsValid)
             {
-                var userId = _authService.GetCurrentUserId();
-                var user = await _context.Users.FindAsync(userId);
-
-                if (user != null)
-                {
-                    // 更新用户名和密码
-                    user.UserName = model.UserName;
-                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
-                    user.UpdateTime = DateTime.Now;
-
-                    _context.Users.Update(user);
-                    await _context.SaveChangesAsync();
-
-                    // 重新登录以更新身份信息
-                    await SignInUser(user);
-
-                    return RedirectToAction("Index", "Home");
-                }
+                return View(model);
             }
 
-            return View(model);
+            // 2. 用 OpenId 匹配当前用户（登录核心逻辑，保留 OpenId 作用）
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.OpenId == model.OpenId);
+
+            if (user == null)
+            {
+                ModelState.AddModelError("", "用户不存在，请重新登录");
+                return View(model);
+            }
+
+            // 3. 更新用户信息（用户名已通过全局唯一验证）
+            user.UserName = model.UserName;
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
+            user.UpdateTime = DateTime.Now;
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            // 4. 重新登录（用 OpenId/用户名）
+            await SignInUser(user);
+
+            // 5. 跳转指定页面
+            return LocalRedirect(model.ReturnUrl ?? "/");
         }
     }
 }

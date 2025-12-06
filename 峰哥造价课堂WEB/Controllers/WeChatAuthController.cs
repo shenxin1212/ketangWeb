@@ -138,7 +138,7 @@ namespace 峰哥造价课堂WEB.Controllers
                     if (string.IsNullOrEmpty(user.UserName) || string.IsNullOrEmpty(user.PasswordHash))
                     {
                         // 用户名或密码为空，跳转到完善信息页面
-                        return RedirectToAction("CompleteRegistration", "Account", new { openId = user.OpenId });
+                        return RedirectToAction("CompleteInfo", "Account", new { openId = user.OpenId });
                     }
                     else
                     {

@@ -6,7 +6,6 @@
             <h2 class="mb-0">完善登录信息</h2>
         </div>
         <div class="card-body">
-            <p class="text-muted text-center mb-4">请设置您的用户名和密码，用于后续登录系统</p>
             @if (!ViewData.ModelState.IsValid)
             {
                 <div class="alert alert-danger">
@@ -19,6 +18,9 @@
                 </div>
             }
             <form asp-action="CompleteInfo" method="post" class="needs-validation" novalidate>
+                @Html.AntiForgeryToken()
+
+                <!-- 用户名输入框（远程验证仅校验用户名，不传递 OpenId） -->
                 <div class="form-group mb-4">
                     <label asp-for="UserName" class="form-label fw-semibold">用户名</label>
                     <div class="input-group">
@@ -31,6 +33,7 @@
                     </div>
                 </div>
 
+                <!-- 密码/确认密码部分（不变） -->
                 <div class="form-group mb-4">
                     <label asp-for="Password" class="form-label fw-semibold">密码</label>
                     <div class="input-group">
@@ -45,9 +48,7 @@
                             <span asp-validation-for="Password"></span>
                         </div>
                     </div>
-                    <small class="form-text text-muted mt-1">密码长度必须在6-20个字符之间</small>
                 </div>
-
                 <div class="form-group mb-5">
                     <label asp-for="ConfirmPassword" class="form-label fw-semibold">确认密码</label>
                     <div class="input-group">
@@ -76,9 +77,8 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-}
 
-    <style>
+      <style>
         .complete-info-container {
             min-height: 100vh;
             display: flex;
@@ -108,11 +108,11 @@
             border: 1px solid #ced4da;
         }
 
-            .form-control:focus {
-                border-color: #80bdff;
-                box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-                transform: translateY(-1px);
-            }
+        .form-control:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+            transform: translateY(-1px);
+        }
 
         .btn-primary {
             background-color: #0d6efd;
@@ -120,19 +120,19 @@
             transition: all 0.3s ease;
         }
 
-            .btn-primary:hover {
-                background-color: #0b5ed7;
-                border-color: #0a58ca;
-            }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
 
         .hover-lift {
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-            .hover-lift:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            }
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
 
         .toggle-password {
             cursor: pointer;
@@ -145,49 +145,39 @@
         .bi {
             font-size: 1.1rem;
         }
+
+        /* 修复后的抖动动画（核心） */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            -webkit-animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; /* 兼容webkit内核 */
+        }
     </style>
-
     <script>
-        // 密码显示/隐藏切换
-        document.querySelectorAll('.toggle-password').forEach(button => {
-            button.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const input = document.getElementById(targetId);
-                const icon = this.querySelector('i');
-
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.classList.remove('bi-eye');
-                    icon.classList.add('bi-eye-slash');
-                } else {
-                    input.type = 'password';
-                    icon.classList.remove('bi-eye-slash');
-                    icon.classList.add('bi-eye');
-                }
+        // 密码显示/隐藏 + 表单验证（不变）
+        document.querySelectorAll('.toggle-password').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                const icon = btn.querySelector('i');
+                input.type = input.type === 'password' ? 'text' : 'password';
+                icon.classList.toggle('bi-eye');
+                icon.classList.toggle('bi-eye-slash');
             });
         });
 
-        // 表单验证反馈
-        (function () {
+        (() => {
             'use strict';
-            var forms = document.querySelectorAll('.needs-validation');
-
-            Array.prototype.slice.call(forms).forEach(function (form) {
-                form.addEventListener('submit', function (event) {
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-
-                        // 为无效字段添加动画效果
+            document.querySelectorAll('.needs-validation').forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    if (!$(form).valid()) {
+                        e.preventDefault();
+                        e.stopPropagation();
                         form.querySelectorAll(':invalid').forEach(field => {
-                            field.classList.add('is-invalid');
-                            field.classList.add('shake');
+                            field.classList.add('is-invalid', 'shake');
                             setTimeout(() => field.classList.remove('shake'), 500);
                         });
                     }
-
                     form.classList.add('was-validated');
-                }, false);
+                });
             });
         })();
     </script>
