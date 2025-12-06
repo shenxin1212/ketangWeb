@@ -104,6 +104,29 @@ namespace 峰哥造价课堂WEB.Controllers
             return Redirect(authUrl);
         }
 
+        // 完善信息的提交接口（确保验证失败时返回视图）
+        [HttpPost]
+        public async Task<IActionResult> CompleteInfo(UserInfoViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                // 验证失败，返回视图并显示错误
+                return View(model);
+            }
+
+            // 验证通过，更新用户信息（示例代码）
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.OpenId == model.OpenId);
+            if (user != null)
+            {
+                user.UserName = model.UserName;
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
+                user.UpdateTime = DateTime.Now;
+                await _context.SaveChangesAsync();
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
         [HttpGet]
         public IActionResult CompleteInfo(string returnUrl = "/")
         {
@@ -116,6 +139,21 @@ namespace 峰哥造价课堂WEB.Controllers
 
             // 返回信息完善表单视图
             return View();
+        }
+
+        // 用户名唯一性验证接口（供Remote特性调用）
+        [AcceptVerbs("GET", "POST")]
+        public async Task<IActionResult> CheckUserNameUnique(string userName, string openId)
+        {
+            // 检查数据库中是否存在相同用户名（排除当前用户自己）
+            var exists = await _context.Users
+                .AnyAsync(u => u.UserName == userName && u.OpenId != openId);
+
+            if (exists)
+            {
+                return Json(false); // 用户名已存在
+            }
+            return Json(true); // 用户名可用
         }
 
         [HttpPost]

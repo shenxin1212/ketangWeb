@@ -65,16 +65,16 @@ namespace 峰哥造价课堂WEB.Controllers
                     var tokenResponse = await httpClient.GetStringAsync(tokenUrl);
                     var tokenData = JsonSerializer.Deserialize<WeChatTokenResponse>(tokenResponse);
 
-                    //// 模拟返回的微信 Token 数据
-                    //tokenData = new WeChatTokenResponse
-                    //{
-                    //    AccessToken = "mock_access_token_123456",
-                    //    ExpiresIn = 7200,
-                    //    RefreshToken = "mock_refresh_token_654321",
-                    //    OpenId = $"wx_openid_{code}_{DateTime.Now.Ticks}", // 可结合传入的 code 生成
-                    //    Scope = "snsapi_login",
-                    //    unionid = $"wx_unionid_{code}_mock"
-                    //};
+                    // 模拟返回的微信 Token 数据
+                    tokenData = new WeChatTokenResponse
+                    {
+                        AccessToken = "mock_access_token_123456",
+                        ExpiresIn = 7200,
+                        RefreshToken = "mock_refresh_token_654321",
+                        OpenId = $"wx_openid_{code}_{DateTime.Now.Ticks}", // 可结合传入的 code 生成
+                        Scope = "snsapi_login",
+                        unionid = $"wx_unionid_{code}_mock"
+                    };
 
                     // 检查是否有错误码
                     if (tokenData.ErrCode.HasValue && tokenData.ErrCode != 0)
@@ -89,7 +89,7 @@ namespace 峰哥造价课堂WEB.Controllers
                     var userInfoResponse = await httpClient.GetStringAsync(userInfoUrl);
                     var userInfo = JsonSerializer.Deserialize<Dictionary<string, object>>(userInfoResponse);
 
-                    //openId = "otqHR66yyBl28Cs8OD_AIIjINatA";
+                    openId = "otqHR66yyBl28Cs8OD_AIIjINatA";
 
                     // 3. 查找或创建用户
                     var user = await _context.Users.FirstOrDefaultAsync(u => u.OpenId == openId);

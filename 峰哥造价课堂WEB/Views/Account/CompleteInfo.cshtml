@@ -7,7 +7,17 @@
         </div>
         <div class="card-body">
             <p class="text-muted text-center mb-4">请设置您的用户名和密码，用于后续登录系统</p>
-
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <ul>
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <li>@error.ErrorMessage</li>
+                        }
+                    </ul>
+                </div>
+            }
             <form asp-action="CompleteInfo" method="post" class="needs-validation" novalidate>
                 <div class="form-group mb-4">
                     <label asp-for="UserName" class="form-label fw-semibold">用户名</label>
@@ -66,6 +76,7 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+}
 
     <style>
         .complete-info-container {
