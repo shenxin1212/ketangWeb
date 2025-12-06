@@ -1,0 +1,183 @@
+﻿@model UserInfoViewModel
+
+<div class="complete-info-container">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white text-center">
+            <h2 class="mb-0">完善登录信息</h2>
+        </div>
+        <div class="card-body">
+            <p class="text-muted text-center mb-4">请设置您的用户名和密码，用于后续登录系统</p>
+
+            <form asp-action="CompleteInfo" method="post" class="needs-validation" novalidate>
+                <div class="form-group mb-4">
+                    <label asp-for="UserName" class="form-label fw-semibold">用户名</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input asp-for="UserName" class="form-control transition-all"
+                               placeholder="请输入用户名" required />
+                        <div class="invalid-feedback">
+                            <span asp-validation-for="UserName"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="Password" class="form-label fw-semibold">密码</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input asp-for="Password" class="form-control transition-all"
+                               placeholder="请输入密码" required />
+                        <button type="button" class="btn btn-outline-secondary toggle-password"
+                                data-target="Password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <div class="invalid-feedback">
+                            <span asp-validation-for="Password"></span>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted mt-1">密码长度必须在6-20个字符之间</small>
+                </div>
+
+                <div class="form-group mb-5">
+                    <label asp-for="ConfirmPassword" class="form-label fw-semibold">确认密码</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                        <input asp-for="ConfirmPassword" class="form-control transition-all"
+                               placeholder="请再次输入密码" required />
+                        <button type="button" class="btn btn-outline-secondary toggle-password"
+                                data-target="ConfirmPassword">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <div class="invalid-feedback">
+                            <span asp-validation-for="ConfirmPassword"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fs-5 fw-medium hover-lift">
+                    提交并继续 <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <style>
+        .complete-info-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background-color: #f8f9fa;
+            background-image: radial-gradient(circle at 10% 20%, rgba(0,135,255,0.05) 0%, transparent 20%), radial-gradient(circle at 90% 80%, rgba(0,135,255,0.05) 0%, transparent 20%);
+        }
+
+        .card {
+            width: 100%;
+            max-width: 500px;
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.2rem;
+            font-size: 1.5rem;
+        }
+
+        .form-control {
+            padding: 0.8rem;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+        }
+
+            .form-control:focus {
+                border-color: #80bdff;
+                box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+                transform: translateY(-1px);
+            }
+
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            transition: all 0.3s ease;
+        }
+
+            .btn-primary:hover {
+                background-color: #0b5ed7;
+                border-color: #0a58ca;
+            }
+
+        .hover-lift {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+            .hover-lift:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+
+        .toggle-password {
+            cursor: pointer;
+        }
+
+        .input-group-text {
+            background-color: #f1f5f9;
+        }
+
+        .bi {
+            font-size: 1.1rem;
+        }
+    </style>
+
+    <script>
+        // 密码显示/隐藏切换
+        document.querySelectorAll('.toggle-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const icon = this.querySelector('i');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                }
+            });
+        });
+
+        // 表单验证反馈
+        (function () {
+            'use strict';
+            var forms = document.querySelectorAll('.needs-validation');
+
+            Array.prototype.slice.call(forms).forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        // 为无效字段添加动画效果
+                        form.querySelectorAll(':invalid').forEach(field => {
+                            field.classList.add('is-invalid');
+                            field.classList.add('shake');
+                            setTimeout(() => field.classList.remove('shake'), 500);
+                        });
+                    }
+
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        })();
+    </script>
+}

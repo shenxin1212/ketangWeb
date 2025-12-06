@@ -63,7 +63,7 @@
                                         <span class="badge bg-danger">禁用</span>
                                     }
                                 </td>
-                                <td>@user.CreateTime.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@(user.CreateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "")</td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
                                         <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-outline-primary">

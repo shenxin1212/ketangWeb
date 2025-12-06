@@ -1,0 +1,59 @@
+﻿@model dynamic
+@{
+    ViewData["Title"] = ViewBag.IsWeChatUser ? "完善账号信息" : "用户注册";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2>@ViewData["Title"]</h2>
+                    @if (ViewBag.IsWeChatUser)
+                    {
+                        <p class="text-muted">请设置您的登录账号和密码，完成账号绑定</p>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ViewBag.Error))
+                    {
+                        <div class="alert alert-danger">@ViewBag.Error</div>
+                    }
+
+                    <form asp-action="Index" method="post">
+                        <!-- 防跨站攻击令牌 -->
+                        @Html.AntiForgeryToken()
+
+                        <!-- 隐藏域传递returnUrl -->
+                        <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   required placeholder="请输入用户名" maxlength="50">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   required placeholder="密码长度不少于6位" minlength="6" maxlength="20">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">确认密码</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"
+                                   required placeholder="再次输入密码" minlength="6" maxlength="20">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            @(ViewBag.IsWeChatUser ? "绑定账号" : "立即注册")
+                        </button>
+                    </form>
+                </div>
+                @if (!ViewBag.IsWeChatUser)
+                {
+                    <div class="card-footer text-center">
+                        <small>已有账号？<a asp-action="Login" asp-controller="Account">立即登录</a></small>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -14,22 +14,6 @@ namespace 峰哥造价课堂WEB.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
 
-            // 这一行配置可以让所有string类型的NULL值自动转为空字符串
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                foreach (var property in entityType.GetProperties())
-                {
-                    if (property.ClrType == typeof(string))
-                    {
-                        property.SetColumnType("varchar(" + (property.GetMaxLength() ?? 255) + ")");
-                        // 设置默认值为空字符串
-                        modelBuilder.Entity(entityType.ClrType)
-                            .Property(property.Name)
-                            .HasDefaultValue("");
-                    }
-                }
-            }
-
             // 配置User表
             modelBuilder.Entity<User>(entity =>
             {
@@ -52,53 +36,63 @@ namespace 峰哥造价课堂WEB.Data
 
                 entity.Property(e => e.OpenId)
                     .HasColumnName("openid")
-                    .HasMaxLength(32);
+                    .HasMaxLength(32)
+                    .IsRequired(false);
 
                 entity.Property(e => e.UnionId)
                     .HasColumnName("unionid")
-                    .HasMaxLength(32);
+                    .HasMaxLength(32)
+                    .IsRequired(false);
 
                 entity.Property(e => e.Nickname)
                     .HasColumnName("nickname")
                     .HasMaxLength(64)
-                    .HasDefaultValue("");
+                    .HasDefaultValue("")
+                    .IsRequired(false);
 
                 entity.Property(e => e.Avatar)
                     .HasColumnName("avatar")
                     .HasMaxLength(255)
-                    .HasDefaultValue("");
+                    .HasDefaultValue("")
+                    .IsRequired(false);
 
                 entity.Property(e => e.Mobile)
                     .HasColumnName("mobile")
-                    .HasMaxLength(15);
+                    .HasMaxLength(15)
+                    .IsRequired(false);
 
                 entity.Property(e => e.CreateTime)
                     .HasColumnName("create_time")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                    .IsRequired(false);
 
                 entity.Property(e => e.UpdateTime)
                     .HasColumnName("update_time")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                    .IsRequired(false);
 
                 entity.Property(e => e.Status)
-                    .HasColumnName("status")
-                    .HasDefaultValue(1);
+                    .HasColumnName("status");
 
                 entity.Property(e => e.AuthToken)
                     .HasColumnName("AuthToken")
-                    .HasMaxLength(100);
+                    .HasMaxLength(100)
+                    .IsRequired(false);
 
                 entity.Property(e => e.TokenExpiry)
-                    .HasColumnName("TokenExpiry");
+                    .HasColumnName("TokenExpiry")
+                    .IsRequired(false);
 
                 entity.Property(e => e.UserName)
                     .HasColumnName("userName")
-                    .HasMaxLength(32);
+                    .HasMaxLength(32)
+                    .IsRequired(false);
 
                 // 添加角色字段（如果表中没有，需要手动添加）
                 entity.Property(e => e.Role)
                     .HasColumnName("role")
-                    .HasDefaultValue("User");
+                    .HasDefaultValue("User")
+                    .IsRequired(false);
 
                 entity.Property(e => e.IsActive)
                     .HasColumnName("is_active")

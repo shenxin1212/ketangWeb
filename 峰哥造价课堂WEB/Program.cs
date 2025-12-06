@@ -17,11 +17,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 // 注册服务
 // 确保有DbContext和HttpContextAccessor：
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 
 // 认证和授权服务
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -64,6 +63,34 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated ?? false)
+    {
+        var userIdClaim = context.User.FindFirst("UserId")?.Value;
+        if (int.TryParse(userIdClaim, out int userId))
+        {
+            // 获取数据库上下文
+            var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var user = await dbContext.Users.FindAsync(userId);
+            if (user != null && (string.IsNullOrEmpty(user.PasswordHash) || string.IsNullOrEmpty(user.UserName)))
+            {
+                // 排除完善信息页面和注销功能
+                if (!context.Request.Path.StartsWithSegments("/Account/CompleteInfo") &&
+                    !context.Request.Path.StartsWithSegments("/Account/Logout"))
+                {
+                    var returnUrl = context.Request.Path + context.Request.QueryString;
+                    context.Response.Redirect($"/Account/CompleteInfo?returnUrl={Uri.EscapeDataString(returnUrl.ToString())}");
+                    return;
+                }
+            }
+        }
+    }
+    await next();
+});
 
 // 启用会话
 app.UseSession();

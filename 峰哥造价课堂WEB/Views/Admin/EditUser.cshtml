@@ -52,7 +52,7 @@
 
                     <div class="mb-3">
                         <label class="form-label">注册时间</label>
-                        <input value="@Model.CreateTime.ToString("yyyy-MM-dd HH:mm:ss")" class="form-control" readonly>
+                        <input value="@(Model.CreateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "")" class="form-control" readonly>
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -90,7 +90,7 @@
                     </dd>
 
                     <dt class="col-sm-4">最后更新:</dt>
-                    <dd class="col-sm-8">@Model.UpdateTime.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                    <dd class="col-sm-8">@(Model.UpdateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "")</dd>
 
                     <dt class="col-sm-4">状态码:</dt>
                     <dd class="col-sm-8">
