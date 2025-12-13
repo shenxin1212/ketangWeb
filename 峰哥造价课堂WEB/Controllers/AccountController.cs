@@ -150,6 +150,14 @@ namespace 峰哥造价课堂WEB.Controllers
                 return View(model);
             }
 
+            // 补充后端校验：检查用户名是否已存在
+            var userNameExists = await _context.Users.AnyAsync(u => u.UserName == model.UserName);
+            if (userNameExists)
+            {
+                ModelState.AddModelError("UserName", "用户名已被占用，请更换");
+                return View(model);
+            }
+
             // 2. 用 OpenId 匹配当前用户（登录核心逻辑，保留 OpenId 作用）
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.OpenId == model.OpenId);

@@ -99,5 +99,7 @@ namespace 峰哥造价课堂WEB.Models
         // 添加是否已完善信息的属性
         [NotMapped]
         public bool IsInfoCompleted => !string.IsNullOrEmpty(SafeUserName) && !string.IsNullOrEmpty(SafePasswordHash);
+
+        public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
     }
 }

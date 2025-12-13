@@ -19,6 +19,8 @@
             }
             <form asp-action="CompleteInfo" method="post" class="needs-validation" novalidate>
                 @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="OpenId" />
+                <input type="hidden" asp-for="ReturnUrl" />
 
                 <!-- 用户名输入框（远程验证仅校验用户名，不传递 OpenId） -->
                 <div class="form-group mb-4">

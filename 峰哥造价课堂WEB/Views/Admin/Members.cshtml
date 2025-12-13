@@ -1,0 +1,202 @@
+﻿@model List<峰哥造价课堂WEB.Models.MemberViewModel>
+
+@{
+    ViewData["Title"] = "会员管理";
+    // 将模型数据序列化为JSON，供前端使用
+    var memberJson = System.Text.Json.JsonSerializer.Serialize(Model);
+}
+
+<div class="container">
+    <h2>会员管理</h2>
+
+    <!-- 筛选区域 -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <input type="text" id="nicknameFilter" class="form-control"
+                   placeholder="搜索微信名" value="">
+        </div>
+        <div class="col-md-8">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary active" data-status="all">全部</button>
+                <button type="button" class="btn btn-outline-primary" data-status="新用户">新用户</button>
+                <button type="button" class="btn btn-outline-primary" data-status="使用中">使用中</button>
+                <button type="button" class="btn btn-outline-primary" data-status="成本测算已到期">成本测算已到期</button>
+                <button type="button" class="btn btn-outline-primary" data-status="成本助手已到期">成本助手已到期</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 会员表格 -->
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>昵称</th>
+                <th>成本测算到期</th>
+                <th>成本助手到期</th>
+                <th>创建时间</th>
+                <th>试用状态</th>
+                <th>综合状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="memberTableBody">
+            <!-- 内容由JS动态生成 -->
+        </tbody>
+    </table>
+</div>
+
+<!-- VIP设置模态框 -->
+<div class="modal fade" id="vipModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="UpdateVipStatus" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">设置VIP权限</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="userId" id="userId">
+
+                    <div class="mb-3">
+                        <label>权限类型</label>
+                        <div>
+                            <input type="radio" name="permId" value="1" checked> 成本测算
+                            <input type="radio" name="permId" value="2"> 成本助手
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>到期时间</label>
+                        <input type="datetime-local" name="expiryTime" id="expiryTime" class="form-control">
+                    </div>
+
+                    <div class="btn-group mb-3">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(3)">3天</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(7)">7天</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(30)">1个月</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(90)">3个月</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(365)">1年</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="setLifetime()">终身</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">确认</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 1. 初始化数据源（从后端模型序列化的JSON）
+    const allMembers = @Html.Raw(memberJson);
+    let currentStatus = "all"; // 当前选中的状态
+
+    // 2. 页面加载时渲染全部数据
+    window.onload = function() {
+        renderTable(allMembers);
+    };
+
+    // 3. 渲染表格的核心函数
+    function renderTable(members) {
+        const tableBody = document.getElementById("memberTableBody");
+        // 清空表格
+        tableBody.innerHTML = "";
+
+        if (members.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="8" class="text-center">暂无数据</td></tr>`;
+            return;
+        }
+
+        // 遍历数据生成行
+        members.forEach(member => {
+            const row = document.createElement("tr");
+            // 格式化时间
+            const cesuanExpiry = member.CesuanExpiry
+                ? new Date(member.CesuanExpiry).toLocaleString()
+                : "未设置";
+            const zhushouExpiry = member.ZhushouExpiry
+                ? new Date(member.ZhushouExpiry).toLocaleString()
+                : "未设置";
+            const createTime = new Date(member.CreateTime).toLocaleString();
+
+            // 拼接行内容
+            row.innerHTML = `
+                <td>${member.Id}</td>
+                <td>${member.Nickname || ""}</td>
+                <td>${cesuanExpiry}</td>
+                <td>${zhushouExpiry}</td>
+                <td>${createTime}</td>
+                <td>${member.Status || ""}</td>
+                <td>${member.ShowStatus || ""}</td>
+                <td>
+                    <button type="button" class="btn btn-success" onclick="openVipModal(${member.Id})">
+                        设置VIP
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    // 4. 昵称筛选：实时输入过滤
+    document.getElementById("nicknameFilter").addEventListener("input", function() {
+        const nickname = this.value.trim().toLowerCase();
+        filterMembers(nickname, currentStatus);
+    });
+
+    // 5. 状态筛选按钮点击事件
+    document.querySelectorAll(".btn-group button").forEach(btn => {
+        btn.addEventListener("click", function() {
+            // 切换按钮激活状态
+            document.querySelectorAll(".btn-group button").forEach(b => b.classList.remove("active"));
+            this.classList.add("active");
+            // 更新当前状态
+            currentStatus = this.getAttribute("data-status");
+            // 执行筛选
+            const nickname = document.getElementById("nicknameFilter").value.trim().toLowerCase();
+            filterMembers(nickname, currentStatus);
+        });
+    });
+
+    // 6. 筛选数据的核心函数
+    function filterMembers(nickname, status) {
+        let filtered = allMembers;
+
+        // 按昵称筛选（模糊匹配，不区分大小写）
+        if (nickname) {
+            filtered = filtered.filter(member =>
+                member.Nickname && member.Nickname.toLowerCase().includes(nickname)
+            );
+        }
+
+        // 按状态筛选
+        if (status !== "all") {
+            filtered = filtered.filter(member =>
+                member.ShowStatus === status || member.Status === status
+            );
+        }
+
+        // 渲染筛选后的结果
+        renderTable(filtered);
+    }
+
+    // 7. 模态框相关函数
+    function openVipModal(userId) {
+        document.getElementById("userId").value = userId;
+        const modal = new bootstrap.Modal(document.getElementById('vipModal'));
+        modal.show();
+    }
+
+    function setExpiry(days) {
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        document.getElementById('expiryTime').value = date.toISOString().slice(0, 16);
+    }
+
+    function setLifetime() {
+        document.getElementById('expiryTime').value = '2099-12-31T23:59';
+    }
+</script>
