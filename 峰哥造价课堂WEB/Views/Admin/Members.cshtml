@@ -1,202 +1,190 @@
-﻿@model List<峰哥造价课堂WEB.Models.MemberViewModel>
+﻿@model IEnumerable<峰哥造价课堂WEB.Models.MemberViewModel>
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@removeTagHelper Microsoft.AspNetCore.Mvc.TagHelpers.OptionTagHelper, Microsoft.AspNetCore.Mvc.TagHelpers
 
 @{
-    ViewData["Title"] = "会员管理";
-    // 将模型数据序列化为JSON，供前端使用
-    var memberJson = System.Text.Json.JsonSerializer.Serialize(Model);
+    ViewData["Title"] = "会员权限管理";
+    var statusFilter = ViewBag.StatusFilter as string ?? "all";
+    var nickname = ViewBag.Nickname as string ?? "";
 }
 
-<div class="container">
-    <h2>会员管理</h2>
+<div class="container mt-4">
+    <h2>会员权限管理</h2>
 
-    <!-- 筛选区域 -->
-    <div class="row mb-3">
-        <div class="col-md-4">
-            <input type="text" id="nicknameFilter" class="form-control"
-                   placeholder="搜索微信名" value="">
-        </div>
-        <div class="col-md-8">
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-primary active" data-status="all">全部</button>
-                <button type="button" class="btn btn-outline-primary" data-status="新用户">新用户</button>
-                <button type="button" class="btn btn-outline-primary" data-status="使用中">使用中</button>
-                <button type="button" class="btn btn-outline-primary" data-status="成本测算已到期">成本测算已到期</button>
-                <button type="button" class="btn btn-outline-primary" data-status="成本助手已到期">成本助手已到期</button>
+<!-- 筛选区域 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Members" method="get" class="row g-3">
+            <div class="col-md-4">
+                <select name="statusFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="all" @(statusFilter == "all" ? "selected" : "")>所有状态</option>
+                    <option value="新用户" @(statusFilter == "新用户" ? "selected" : "")>新用户</option>
+                    <option value="使用中" @(statusFilter == "使用中" ? "selected" : "")>使用中</option>
+                    <option value="成本测算已到期" @(statusFilter == "成本测算已到期" ? "selected" : "")>成本测算已到期</option>
+                    <option value="成本助手已到期" @(statusFilter == "成本助手已到期" ? "selected" : "")>成本助手已到期</option>
+                </select>
             </div>
-        </div>
-    </div>
-
-    <!-- 会员表格 -->
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>昵称</th>
-                <th>成本测算到期</th>
-                <th>成本助手到期</th>
-                <th>创建时间</th>
-                <th>试用状态</th>
-                <th>综合状态</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody id="memberTableBody">
-            <!-- 内容由JS动态生成 -->
-        </tbody>
-    </table>
-</div>
-
-<!-- VIP设置模态框 -->
-<div class="modal fade" id="vipModal" tabindex="-1">
-    <div class="modal-dialog">
-        <form asp-action="UpdateVipStatus" method="post">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">设置VIP权限</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="userId" id="userId">
-
-                    <div class="mb-3">
-                        <label>权限类型</label>
-                        <div>
-                            <input type="radio" name="permId" value="1" checked> 成本测算
-                            <input type="radio" name="permId" value="2"> 成本助手
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label>到期时间</label>
-                        <input type="datetime-local" name="expiryTime" id="expiryTime" class="form-control">
-                    </div>
-
-                    <div class="btn-group mb-3">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(3)">3天</button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(7)">7天</button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(30)">1个月</button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(90)">3个月</button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="setExpiry(365)">1年</button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="setLifetime()">终身</button>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                    <button type="submit" class="btn btn-primary">确认</button>
-                </div>
+            <div class="col-md-6">
+                <input type="text" name="nickname" class="form-control"
+                       placeholder="输入微信昵称搜索" value="@ViewBag.Nickname">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">搜索</button>
             </div>
         </form>
     </div>
 </div>
 
-<script>
-    // 1. 初始化数据源（从后端模型序列化的JSON）
-    const allMembers = @Html.Raw(memberJson);
-    let currentStatus = "all"; // 当前选中的状态
+    <!-- 会员表格 - 固定表头+懒加载 -->
+    <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+        <table class="table table-striped table-hover">
+            <thead class="table-light sticky-top">
+                <tr>
+                    <th>ID</th>
+                    <th>微信昵称</th>
+                    <th>注册时间</th>
+                    <th>试用状态</th>
+                    <th>成本测算到期</th>
+                    <th>成本助手到期</th>
+                    <th>综合状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="membersTableBody">
+                <!-- 初始加载的内容 -->
+                @foreach (var item in Model.Take(20))
+                {
+                    <tr>
+                        <td>@item.Id</td>
+                        <td>@item.Nickname</td>
+                        <td>@item.CreateTime.ToString("yyyy-MM-dd")</td>
+                        <td>@item.Status</td>
+                        <td>@(item.CesuanExpiry.HasValue ? item.CesuanExpiry.Value.ToString("yyyy-MM-dd") : "未开通")</td>
+                        <td>@(item.ZhushouExpiry.HasValue ? item.ZhushouExpiry.Value.ToString("yyyy-MM-dd") : "未开通")</td>
+                        <td>
+                            <span class="badge @ViewBag.StatusStyles[item.ShowStatus]">@item.ShowStatus</span>
+                        </td>
+                        <td>
+                            <a asp-action="AssignPermissions" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
+                                分配权限
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 
-    // 2. 页面加载时渲染全部数据
-    window.onload = function() {
-        renderTable(allMembers);
-    };
+    <!-- 加载中提示 -->
+    <div id="loadingIndicator" class="text-center py-3 d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
 
-    // 3. 渲染表格的核心函数
-    function renderTable(members) {
-        const tableBody = document.getElementById("memberTableBody");
-        // 清空表格
-        tableBody.innerHTML = "";
+    <!-- 没有更多数据提示 -->
+    <div id="noMoreData" class="text-center py-3 text-muted d-none">
+        已经加载全部数据
+    </div>
+</div>
 
-        if (members.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="8" class="text-center">暂无数据</td></tr>`;
-            return;
+@section Scripts {
+    <script>
+        // 状态样式映射
+        function getStatusClass(status) {
+            switch(status) {
+                case "使用中": return "bg-success";
+                case "新用户": return "bg-info";
+                case "成本测算已到期": return "bg-warning";
+                case "成本助手已到期": return "bg-danger";
+                default: return "bg-secondary";
+            }
         }
 
-        // 遍历数据生成行
-        members.forEach(member => {
-            const row = document.createElement("tr");
-            // 格式化时间
-            const cesuanExpiry = member.CesuanExpiry
-                ? new Date(member.CesuanExpiry).toLocaleString()
-                : "未设置";
-            const zhushouExpiry = member.ZhushouExpiry
-                ? new Date(member.ZhushouExpiry).toLocaleString()
-                : "未设置";
-            const createTime = new Date(member.CreateTime).toLocaleString();
+        // 懒加载实现
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableBody = document.getElementById('membersTableBody');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const noMoreData = document.getElementById('noMoreData');
 
-            // 拼接行内容
-            row.innerHTML = `
-                <td>${member.Id}</td>
-                <td>${member.Nickname || ""}</td>
-                <td>${cesuanExpiry}</td>
-                <td>${zhushouExpiry}</td>
-                <td>${createTime}</td>
-                <td>${member.Status || ""}</td>
-                <td>${member.ShowStatus || ""}</td>
-                <td>
-                    <button type="button" class="btn btn-success" onclick="openVipModal(${member.Id})">
-                        设置VIP
-                    </button>
-                </td>
-            `;
-            tableBody.appendChild(row);
+            let page = 1; // 当前页码
+            const pageSize = 20; // 每页条数
+            let isLoading = false;
+            let hasMoreData = true;
+
+            // 滚动监听
+            const tableContainer = document.querySelector('.table-responsive');
+            tableContainer.addEventListener('scroll', handleScroll);
+
+            // 处理滚动事件
+            function handleScroll() {
+                // 当滚动到容器底部附近时加载更多
+                if (tableContainer.scrollTop + tableContainer.clientHeight >= tableContainer.scrollHeight - 100 &&
+                    !isLoading && hasMoreData) {
+                    loadMoreData();
+                }
+            }
+
+            // 加载更多数据
+            async function loadMoreData() {
+                isLoading = true;
+                loadingIndicator.classList.remove('d-none');
+
+                try {
+                    // 获取当前筛选条件
+                    const statusFilter = new URLSearchParams(window.location.search).get('statusFilter') || 'all';
+                    const nickname = new URLSearchParams(window.location.search).get('nickname') || '';
+
+                    // 发起请求加载更多数据
+                    const response = await fetch(`/Admin/MembersLoadMore?page=${page + 1}&pageSize=${pageSize}&statusFilter=${statusFilter}&nickname=${nickname}`);
+
+                    if (!response.ok) throw new Error('加载失败');
+
+                    const data = await response.json();
+
+                    if (data.length === 0) {
+                        hasMoreData = false;
+                        noMoreData.classList.remove('d-none');
+                        return;
+                    }
+
+                    // 添加新数据到表格
+                    data.forEach(member => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${member.id}</td>
+                            <td>${member.nickname}</td>
+                            <td>${formatDate(member.createTime)}</td>
+                            <td>${member.status}</td>
+                            <td>${member.cesuanExpiry ? formatDate(member.cesuanExpiry) : '未开通'}</td>
+                            <td>${member.zhushouExpiry ? formatDate(member.zhushouExpiry) : '未开通'}</td>
+                            <td>
+                                <span class="badge ${getStatusClass(member.showStatus)}">${member.showStatus}</span>
+                            </td>
+                            <td>
+                                <a href="/Admin/AssignPermissions/${member.id}" class="btn btn-sm btn-outline-primary">
+                                    分配权限
+                                </a>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+
+                    page++;
+                } catch (error) {
+                    console.error('加载更多数据失败:', error);
+                } finally {
+                    isLoading = false;
+                    loadingIndicator.classList.add('d-none');
+                }
+            }
+
+            // 日期格式化工具
+            function formatDate(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                return date.toLocaleDateString('zh-CN');
+            }
         });
-    }
-
-    // 4. 昵称筛选：实时输入过滤
-    document.getElementById("nicknameFilter").addEventListener("input", function() {
-        const nickname = this.value.trim().toLowerCase();
-        filterMembers(nickname, currentStatus);
-    });
-
-    // 5. 状态筛选按钮点击事件
-    document.querySelectorAll(".btn-group button").forEach(btn => {
-        btn.addEventListener("click", function() {
-            // 切换按钮激活状态
-            document.querySelectorAll(".btn-group button").forEach(b => b.classList.remove("active"));
-            this.classList.add("active");
-            // 更新当前状态
-            currentStatus = this.getAttribute("data-status");
-            // 执行筛选
-            const nickname = document.getElementById("nicknameFilter").value.trim().toLowerCase();
-            filterMembers(nickname, currentStatus);
-        });
-    });
-
-    // 6. 筛选数据的核心函数
-    function filterMembers(nickname, status) {
-        let filtered = allMembers;
-
-        // 按昵称筛选（模糊匹配，不区分大小写）
-        if (nickname) {
-            filtered = filtered.filter(member =>
-                member.Nickname && member.Nickname.toLowerCase().includes(nickname)
-            );
-        }
-
-        // 按状态筛选
-        if (status !== "all") {
-            filtered = filtered.filter(member =>
-                member.ShowStatus === status || member.Status === status
-            );
-        }
-
-        // 渲染筛选后的结果
-        renderTable(filtered);
-    }
-
-    // 7. 模态框相关函数
-    function openVipModal(userId) {
-        document.getElementById("userId").value = userId;
-        const modal = new bootstrap.Modal(document.getElementById('vipModal'));
-        modal.show();
-    }
-
-    function setExpiry(days) {
-        const date = new Date();
-        date.setDate(date.getDate() + days);
-        document.getElementById('expiryTime').value = date.toISOString().slice(0, 16);
-    }
-
-    function setLifetime() {
-        document.getElementById('expiryTime').value = '2099-12-31T23:59';
-    }
-</script>
+    </script>
+}

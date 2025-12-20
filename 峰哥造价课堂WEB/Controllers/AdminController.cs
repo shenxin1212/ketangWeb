@@ -195,6 +195,17 @@ namespace VideoManagementSystem.Controllers
                 members = members.Where(m => m.Nickname.Contains(nickname)).ToList();
             }
 
+            ViewBag.StatusFilter = statusFilter;
+            ViewBag.Nickname = nickname;
+            ViewBag.StatusStyles = new Dictionary<string, string>
+            {
+                {"使用中", "bg-success"},
+                {"新用户", "bg-info"},
+                {"成本测算已到期", "bg-warning"},
+                {"成本助手助手已到期", "bg-danger"},
+                {"默认", "bg-secondary"}
+            };
+
             return View(members);
         }
 
@@ -271,33 +282,118 @@ namespace VideoManagementSystem.Controllers
                 .Include(u => u.UserPermissions)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
-            if (user == null || user.UserName == "admin") return NotFound();
+            if (user == null)
+            {
+                return NotFound("用户不存在");
+            }
 
-            // 清除现有权限关联
-            user.UserPermissions.Clear();
+            // 1. 删除用户当前所有权限（先清空再重新添加）
+            _context.UserPermissions.RemoveRange(user.UserPermissions);
 
-            // 添加新的权限关联
+            // 2. 添加选中的新权限
             if (permissionIds != null && permissionIds.Any())
             {
-                var permissions = await _context.Permissions
+                var selectedPermissions = await _context.Permissions
                     .Where(p => permissionIds.Contains(p.Id))
                     .ToListAsync();
 
-                foreach (var permission in permissions)
+                foreach (var perm in selectedPermissions)
                 {
                     user.UserPermissions.Add(new UserPermission
                     {
                         UserId = userId,
-                        PermId = permission.Id
+                        PermId = perm.Id,
+                        GrantTime = DateTime.Now // 权限授予时间（可根据需求改为过期时间）
                     });
                 }
             }
 
-            user.UpdateTime = DateTime.Now;
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "权限分配成功";
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"保存失败：{ex.Message}";
+            }
 
-            return RedirectToAction("Users");
+            return RedirectToAction("Members");
         }
+        // 用于懒加载的API方法
+        public async Task<IActionResult> MembersLoadMore(int page = 1, int pageSize = 20, string statusFilter = "all", string nickname = "")
+        {
+            // 复用原有的查询逻辑
+            var query = from u in _context.Users
+                        join p in _context.UserPermissions on u.Id equals p.UserId into up
+                        from perm in up.DefaultIfEmpty()
+                        group perm by new { u.Id, u.Nickname, u.CreateTime, u.Status } into g
+                        select new MemberViewModel
+                        {
+                            Id = g.Key.Id,
+                            Nickname = g.Key.Nickname ?? "未知用户",
+                            CreateTime = g.Key.CreateTime ?? DateTime.MinValue,
+                            Status = g.Key.Status == 0 ? "试用用户" : "试用已结束",
+                            CesuanExpiry = g.Where(p => p.PermId == 1).Max(p => p.GrantTime),
+                            ZhushouExpiry = g.Where(p => p.PermId == 2).Max(p => p.GrantTime)
+                        };
 
+            // 计算综合状态
+            var members = await query.ToListAsync();
+            foreach (var m in members)
+            {
+                // 状态计算逻辑（与原代码相同）
+                var currentTime = DateTime.Now;
+                var createTime = m.CreateTime;
+
+                if (m.CesuanExpiry.HasValue && m.ZhushouExpiry.HasValue &&
+                    m.CesuanExpiry < createTime && m.ZhushouExpiry < createTime)
+                {
+                    m.ShowStatus = "新用户";
+                }
+                else if ((m.CesuanExpiry.HasValue && m.CesuanExpiry > createTime && m.CesuanExpiry > currentTime) ||
+                         (m.ZhushouExpiry.HasValue && m.ZhushouExpiry > createTime && m.ZhushouExpiry > currentTime))
+                {
+                    m.ShowStatus = "使用中";
+                }
+                else if (m.CesuanExpiry.HasValue && m.CesuanExpiry > createTime && m.CesuanExpiry < currentTime)
+                {
+                    m.ShowStatus = "成本测算已到期";
+                }
+                else if (m.ZhushouExpiry.HasValue && m.ZhushouExpiry > createTime && m.ZhushouExpiry < currentTime)
+                {
+                    m.ShowStatus = "成本助手已到期";
+                }
+                else
+                {
+                    m.ShowStatus = "新用户";
+                }
+            }
+
+            // 筛选逻辑
+            if (statusFilter != "all")
+            {
+                members = members.Where(m => m.ShowStatus == statusFilter).ToList();
+            }
+            if (!string.IsNullOrEmpty(nickname))
+            {
+                members = members.Where(m => m.Nickname.Contains(nickname)).ToList();
+            }
+
+            // 分页处理
+            var pagedData = members.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            // 返回JSON格式数据
+            return Json(pagedData.Select(m => new
+            {
+                id = m.Id,
+                nickname = m.Nickname,
+                createTime = m.CreateTime,
+                status = m.Status,
+                cesuanExpiry = m.CesuanExpiry,
+                zhushouExpiry = m.ZhushouExpiry,
+                showStatus = m.ShowStatus
+            }));
+        }
     }
 }
