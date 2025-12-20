@@ -1,22 +1,101 @@
-﻿@model User
+﻿@model 峰哥造价课堂WEB.Models.User
+@using 峰哥造价课堂WEB.Models
+@using System
 
-<h1>为 @Model.SafeUserName 分配权限</h1>
+<h1>为 @Model.SafeNickname 分配权限</h1>
 
 <form asp-action="AssignPermissions" asp-route-userId="@Model.Id" method="post">
     @foreach (var perm in ViewBag.AllPermissions as List<Permission>)
     {
-        var isChecked = (ViewBag.UserPermissionIds as List<int>).Contains(perm.Id);
-        <div class="form-check">
-            <input type="checkbox" name="permissionIds" value="@perm.Id" class="form-check-input" @(isChecked ? "checked" : "")>
-            <label class="form-check-label">
-                @perm.Name (@perm.PermKey)
+        // 获取当前权限的已有分配信息
+        var userPerm = Model.UserPermissions.FirstOrDefault(up => up.PermId == perm.Id);
+        var isChecked = userPerm != null;
+        var expiryDate = userPerm?.GrantTime ?? DateTime.Now.AddYears(1);
+        var isExpired = userPerm != null && userPerm.GrantTime < DateTime.Now;
+
+        <div class="card mb-3 @(isExpired ? "border-danger" : "border-secondary")">
+            <div class="card-body">
+                <div class="form-check">
+                    <input type="checkbox"
+                           name="permissionIds"
+                           value="@perm.Id"
+                           class="form-check-input permission-checkbox"
+                           data-perm-id="@perm.Id"
+                    @(isChecked ? "checked" : "")> <!-- 修复此处属性语法 -->
+                    <label class="form-check-label h5">
+                        @perm.Name (@perm.PermKey)
+                        @if (isChecked)
+                        {
+                            <span class="ms-2 badge @(isExpired ? "bg-danger" : "bg-success")">
+                                @(isExpired ? "已到期" : "有效")
+                            </span>
+                        }
+                    </label>
+                </div>
+
                 @if (!string.IsNullOrEmpty(perm.Description))
                 {
-                    <small class="text-muted">@perm.Description</small>
+                    <p class="text-muted mt-2">@perm.Description</p>
                 }
-            </label>
+
+                @if (isChecked)
+                {
+                    <div class="text-sm text-muted mb-2">
+                        当前状态: @(isExpired ? "已过期" : "正常使用中")
+                        <br>
+                        @if (isExpired)
+                        {
+                            <span class="text-danger">到期时间: @expiryDate.ToString("yyyy-MM-dd")</span>
+                        }
+                        else
+                        {
+                            @:到期时间: @expiryDate.ToString("yyyy-MM-dd")
+                            @if (expiryDate < DateTime.Now.AddDays(30))
+                            {
+                                <span class="text-warning ms-2">（30天内到期）</span>
+                            }
+                        }
+                    </div>
+                }
+
+                <!-- 权限有效期设置（默认隐藏，选中时显示） -->
+                <div class="permission-expiry mt-3 @(isChecked ? "" : "d-none")" data-perm-id="@perm.Id">
+                    <label class="form-label">权限有效期：</label>
+                    <input type="date"
+                           name="expiryDates[@perm.Id]"
+                           value="@expiryDate.ToString("yyyy-MM-dd")"
+                           class="form-control"
+                           min="@DateTime.Now.ToString("yyyy-MM-dd")">
+                </div>
+            </div>
         </div>
     }
+
     <button type="submit" class="btn btn-primary mt-3">保存权限</button>
-    <a asp-action="Members" class="btn btn-secondary mt-3">取消</a>
+    <a asp-action="Members" class="btn btn-secondary mt-3">取消</a> <!-- 修复返回路径 -->
 </form>
+
+@section Scripts {
+    <script>
+        // 当复选框状态变化时显示/隐藏有效期输入框
+        document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const permId = this.getAttribute('data-perm-id');
+                const expiryDiv = document.querySelector(`.permission-expiry[data-perm-id="${permId}"]`);
+
+                if (this.checked) {
+                    expiryDiv.classList.remove('d-none');
+                    // 选中时默认设置为一年后
+                    if (!expiryDiv.querySelector('input').value) {
+                        const nextYear = new Date();
+                        nextYear.setFullYear(nextYear.getFullYear() + 1);
+                        const dateStr = nextYear.toISOString().split('T')[0];
+                        expiryDiv.querySelector('input').value = dateStr;
+                    }
+                } else {
+                    expiryDiv.classList.add('d-none');
+                }
+            });
+        });
+    </script>
+}

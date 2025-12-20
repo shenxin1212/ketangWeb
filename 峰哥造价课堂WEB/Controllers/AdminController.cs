@@ -55,9 +55,9 @@ namespace VideoManagementSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteUser(int id)
+        public async Task<IActionResult> DeleteUser(int userId)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users.FindAsync(userId);
             if (user != null && user.UserName != "admin") // 防止删除管理员自己
             {
                 _context.Users.Remove(user);
@@ -68,9 +68,9 @@ namespace VideoManagementSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleUserStatus(int id)
+        public async Task<IActionResult> ToggleUserStatus(int userId)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users.FindAsync(userId);
             if (user != null && user.UserName != "admin")
             {
                 user.IsActive = !user.IsActive;
@@ -120,9 +120,9 @@ namespace VideoManagementSystem.Controllers
 
         // 新增：重置用户密码
         [HttpPost]
-        public async Task<IActionResult> ResetPassword(int id)
+        public async Task<IActionResult> ResetPassword(int userId)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users.FindAsync(userId);
             if (user != null && user.UserName != "admin")
             {
                 // 重置为默认密码
@@ -276,7 +276,7 @@ namespace VideoManagementSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AssignPermissions(int userId, List<int> permissionIds)
+        public async Task<IActionResult> AssignPermissions(int userId, List<int> permissionIds, Dictionary<int, DateTime> expiryDates)
         {
             var user = await _context.Users
                 .Include(u => u.UserPermissions)
@@ -284,13 +284,13 @@ namespace VideoManagementSystem.Controllers
 
             if (user == null)
             {
-                return NotFound("用户不存在");
+                return NotFound();
             }
 
-            // 1. 删除用户当前所有权限（先清空再重新添加）
-            _context.UserPermissions.RemoveRange(user.UserPermissions);
+            // 移除用户已有的所有权限
+            user.UserPermissions.Clear();
 
-            // 2. 添加选中的新权限
+            // 添加选中的权限及对应的有效期
             if (permissionIds != null && permissionIds.Any())
             {
                 var selectedPermissions = await _context.Permissions
@@ -299,27 +299,32 @@ namespace VideoManagementSystem.Controllers
 
                 foreach (var perm in selectedPermissions)
                 {
-                    user.UserPermissions.Add(new UserPermission
+                    // 获取该权限的有效期，默认1年
+                    if (expiryDates.TryGetValue(perm.Id, out DateTime expiryDate))
                     {
-                        UserId = userId,
-                        PermId = perm.Id,
-                        GrantTime = DateTime.Now // 权限授予时间（可根据需求改为过期时间）
-                    });
+                        user.UserPermissions.Add(new UserPermission
+                        {
+                            PermId = perm.Id,
+                            UserId = userId,
+                            GrantTime = expiryDate // 存储有效期
+                        });
+                    }
+                    else
+                    {
+                        user.UserPermissions.Add(new UserPermission
+                        {
+                            PermId = perm.Id,
+                            UserId = userId,
+                            GrantTime = DateTime.Now.AddYears(1) // 默认有效期1年
+                        });
+                    }
                 }
             }
 
-            try
-            {
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "权限分配成功";
-            }
-            catch (Exception ex)
-            {
-                TempData["ErrorMessage"] = $"保存失败：{ex.Message}";
-            }
-
-            return RedirectToAction("Members");
+            await _context.SaveChangesAsync();
+            return RedirectToAction("Users");
         }
+
         // 用于懒加载的API方法
         public async Task<IActionResult> MembersLoadMore(int page = 1, int pageSize = 20, string statusFilter = "all", string nickname = "")
         {
@@ -394,6 +399,77 @@ namespace VideoManagementSystem.Controllers
                 zhushouExpiry = m.ZhushouExpiry,
                 showStatus = m.ShowStatus
             }));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> UsersData(int page, int pageSize,
+                                         string status = "all",
+                                         string role = "all",
+                                         string keyword = "")
+        {
+            try
+            {
+                // 基础查询
+                var query = _context.Users.AsQueryable();
+
+                // 状态筛选
+                if (status == "active")
+                {
+                    query = query.Where(u => u.IsActive);
+                }
+                else if (status == "inactive")
+                {
+                    query = query.Where(u => !u.IsActive);
+                }
+
+                // 角色筛选
+                if (role != "all")
+                {
+                    query = query.Where(u => u.Role == role);
+                }
+
+                // 关键词搜索（用户名、昵称、手机号）
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    var keywordLower = keyword.ToLower();
+                    query = query.Where(u =>
+                        (u.UserName != null && u.UserName.ToLower().Contains(keywordLower)) ||
+                        (u.Nickname != null && u.Nickname.ToLower().Contains(keywordLower)) ||
+                        (u.Mobile != null && u.Mobile.Contains(keyword)));
+                }
+
+                // 分页处理
+                var totalCount = await query.CountAsync();
+                var users = await query
+                    .OrderBy(u => u.Id)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(u => new
+                    {
+                        id = u.Id,
+                        userName = u.SafeUserName,
+                        nickname = u.SafeNickname,
+                        mobile = u.SafeMobile,
+                        role = u.SafeRole,
+                        isActive = u.IsActive,
+                        createTime = u.CreateTime
+                    })
+                    .ToListAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    data = users
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
         }
     }
 }

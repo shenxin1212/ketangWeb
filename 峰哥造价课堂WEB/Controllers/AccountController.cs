@@ -34,7 +34,7 @@ namespace 峰哥造价课堂WEB.Controllers
         {
             // 查找用户 - 通过UserName字段查找
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserName == username && u.IsActive && u.Status == 1);
+                .FirstOrDefaultAsync(u => u.UserName == username && u.IsActive && u.IsActive );
 
             if (user != null)
             {

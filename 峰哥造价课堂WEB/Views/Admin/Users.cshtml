@@ -1,28 +1,61 @@
-﻿@model List<峰哥造价课堂WEB.Models.User>
+﻿@model IEnumerable<峰哥造价课堂WEB.Models.User>
+
 @{
     ViewData["Title"] = "用户管理";
 }
 
-<h2><i class="fas fa-users"></i> 用户管理</h2>
-
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["SuccessMessage"]
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">用户管理</h1>
     </div>
-}
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">用户列表</h5>
-        <span class="badge bg-primary">共 @Model.Count 个用户</span>
+    <!-- 搜索和筛选区域 -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" id="searchKeyword" class="form-control" placeholder="搜索用户名/昵称/手机号...">
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-control">
+                        <option value="all">全部状态</option>
+                        <option value="active">已激活</option>
+                        <option value="inactive">未激活</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="roleFilter" class="form-control">
+                        <option value="all">全部角色</option>
+                        <option value="Admin">管理员</option>
+                        <option value="User">普通用户</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary" id="searchBtn">搜索</button>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        @if (Model.Any())
-        {
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
+
+    <!-- 加载状态 -->
+    <div id="loadingIndicator" class="text-center py-3 d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">加载中...</span>
+        </div>
+    </div>
+
+    <!-- 无数据提示 -->
+    <div id="noDataMessage" class="text-center py-5 d-none">
+        <p class="text-muted">没有找到匹配的用户数据</p>
+    </div>
+
+    <!-- 用户表格（带固定表头） -->
+    <div class="card shadow mb-4">
+        <div class="card-body p-0">
+            <!-- 表格容器（设置最大高度和滚动） -->
+            <div style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-bordered mb-0" width="100%" cellspacing="0">
+                    <thead style="position: sticky; top: 0; background-color: #fff; z-index: 10;">
                         <tr>
                             <th>ID</th>
                             <th>用户名</th>
@@ -34,84 +67,255 @@
                             <th>操作</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach (var user in Model)
-                        {
-                            <tr>
-                                <td>@user.Id</td>
-                                <td>
-                                    <strong>@user.UserName</strong>
-                                    @if (!string.IsNullOrEmpty(user.OpenId))
-                                    {
-                                        <span class="badge bg-info ms-1">微信用户</span>
-                                    }
-                                </td>
-                                <td>@user.Nickname</td>
-                                <td>@user.Mobile</td>
-                                <td>
-                                    <span class="badge bg-@(user.Role == "Admin" ? "danger" : user.Role == "User" ? "warning" : "secondary")">
-                                        @user.Role
-                                    </span>
-                                </td>
-                                <td>
-                                    @if (user.IsActive && user.Status == 1)
-                                    {
-                                        <span class="badge bg-success">正常</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-danger">禁用</span>
-                                    }
-                                </td>
-                                <td>@(user.CreateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "")</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-outline-primary">
-                                            <i class="fas fa-edit"></i> 编辑
-                                        </a>
-
-                                        @if (user.UserName != "admin")
-                                        {
-                                            <form asp-action="ToggleUserStatus" method="post" class="d-inline">
-                                                <input type="hidden" name="id" value="@user.Id" />
-                                                <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-outline-warning" : "btn-outline-success")">
-                                                    <i class="fas @(user.IsActive ? "fa-ban" : "fa-check")"></i>
-                                                    @(user.IsActive ? "禁用" : "启用")
-                                                </button>
-                                            </form>
-
-                                            <form asp-action="ResetPassword" method="post" class="d-inline">
-                                                <input type="hidden" name="id" value="@user.Id" />
-                                                <button type="submit" class="btn btn-outline-info btn-sm" onclick="return confirm('确定要重置用户 @user.UserName 的密码吗？密码将重置为 123456')">
-                                                    <i class="fas fa-key"></i> 重置密码
-                                                </button>
-                                            </form>
-
-                                            <form asp-action="DeleteUser" method="post" class="d-inline" onsubmit="return confirm('确定要删除用户 @user.UserName 吗？此操作不可恢复！');">
-                                                <input type="hidden" name="id" value="@user.Id" />
-                                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                    <i class="fas fa-trash"></i> 删除
-                                                </button>
-                                            </form>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted ms-2">系统管理员</span>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                        }
+                    <tbody id="userTableBody">
+                        <!-- 数据将通过JS动态加载 -->
                     </tbody>
                 </table>
             </div>
-        }
-        else
-        {
-            <div class="alert alert-info text-center">
-                <h5>暂无用户</h5>
-                <p>系统中还没有用户数据。</p>
-            </div>
-        }
+        </div>
+    </div>
+
+    <!-- 加载更多提示 -->
+    <div class="text-center mt-3" id="loadMoreContainer">
+        <button id="loadMoreBtn" class="btn btn-secondary">加载更多</button>
+        <p id="noMoreData" class="text-muted mt-2 d-none">已加载全部数据</p>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // 分页参数
+        let currentPage = 1;
+        const pageSize = 20;
+        let hasMoreData = true;
+        let isLoading = false;
+        let currentStatus = 'all';
+        let currentRole = 'all';
+        let currentKeyword = '';
+
+        // DOM元素
+        const tableBody = document.getElementById('userTableBody');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const noDataMessage = document.getElementById('noDataMessage');
+        const searchInput = document.getElementById('searchKeyword');
+        const statusFilter = document.getElementById('statusFilter');
+        const roleFilter = document.getElementById('roleFilter');
+        const searchBtn = document.getElementById('searchBtn');
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        const noMoreData = document.getElementById('noMoreData');
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 加载初始数据
+            loadUsers();
+
+            // 搜索和筛选事件
+            searchBtn.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performSearch();
+            });
+            statusFilter.addEventListener('change', performSearch);
+            roleFilter.addEventListener('change', performSearch);
+
+            // 加载更多按钮
+            loadMoreBtn.addEventListener('click', loadMoreData);
+
+            // 滚动监听（滚动到底部加载更多）
+            document.querySelector('div[style="max-height: 600px; overflow-y: auto;"]')
+                .addEventListener('scroll', handleScroll);
+        });
+
+        // 执行搜索和筛选
+        function performSearch() {
+            currentKeyword = searchInput.value.trim();
+            currentStatus = statusFilter.value;
+            currentRole = roleFilter.value;
+            resetPagination();
+            loadUsers();
+        }
+
+        // 重置分页
+        function resetPagination() {
+            currentPage = 1;
+            hasMoreData = true;
+            tableBody.innerHTML = '';
+            loadMoreBtn.classList.remove('d-none');
+            noMoreData.classList.add('d-none');
+        }
+
+        // 加载更多数据
+        function loadMoreData() {
+            if (!hasMoreData || isLoading) return;
+            currentPage++;
+            loadUsers();
+        }
+
+        // 滚动到底部自动加载
+        function handleScroll(e) {
+            const container = e.target;
+            // 检查是否滚动到容器底部（距离底部50px以内）
+            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 50) {
+                loadMoreData();
+            }
+        }
+
+        // 加载用户数据
+        async function loadUsers() {
+            if (isLoading) return;
+
+            isLoading = true;
+            loadingIndicator.classList.remove('d-none');
+            noDataMessage.classList.add('d-none');
+
+            try {
+                // 构建请求URL
+                const url = `/Admin/UsersData?page=${currentPage}&pageSize=${pageSize}` +
+                            `&status=${encodeURIComponent(currentStatus)}` +
+                            `&role=${encodeURIComponent(currentRole)}` +
+                            `&keyword=${encodeURIComponent(currentKeyword)}`;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('请求失败');
+
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || '加载失败');
+
+                // 处理数据
+                if (result.data.length === 0) {
+                    hasMoreData = false;
+                    loadMoreBtn.classList.add('d-none');
+                    noMoreData.classList.remove('d-none');
+
+                    if (currentPage === 1) {
+                        noMoreData.classList.add('d-none');
+                        noDataMessage.classList.remove('d-none');
+                    }
+                } else {
+                    renderUsers(result.data);
+                    hasMoreData = result.data.length === pageSize;
+                    if (!hasMoreData) {
+                        loadMoreBtn.classList.add('d-none');
+                        noMoreData.classList.remove('d-none');
+                    }
+                }
+            } catch (error) {
+                console.error('加载用户失败:', error);
+                alert('加载用户数据失败，请重试');
+            } finally {
+                isLoading = false;
+                loadingIndicator.classList.add('d-none');
+            }
+        }
+
+        // 渲染用户数据
+        function renderUsers(users) {
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${escapeHtml(user.userName)}</td>
+                    <td>${escapeHtml(user.nickname)}</td>
+                    <td>${escapeHtml(user.mobile) || '-'}</td>
+                    <td>
+                        <span class="badge ${getRoleClass(user.role)}">
+                            ${escapeHtml(user.role)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${user.isActive ? 'bg-success' : 'bg-danger'}">
+                            ${user.isActive ? '已激活' : '未激活'}
+                        </span>
+                    </td>
+                    <td>${formatDate(user.createTime)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-primary"
+                                    onclick="window.location.href='/Admin/EditUser/${user.id}'">
+                                编辑
+                            </button>
+                            <button class="btn btn-warning"
+                                    onclick="resetPassword(${user.id})">
+                                重置密码
+                            </button>
+                            <button class="btn btn-${user.isActive ? 'danger' : 'success'}"
+                                    onclick="toggleUserStatus(${user.id}, ${!user.isActive})">
+                                ${user.isActive ? '禁用' : '启用'}
+                            </button>
+                            <button class="btn btn-secondary"
+                                    onclick="window.location.href='/Admin/AssignPermissions/${user.id}'">
+                                权限
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 角色样式类
+        function getRoleClass(role) {
+            return role === 'Admin' ? 'bg-primary' : 'bg-secondary';
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // XSS防护
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // 切换用户状态
+        function toggleUserStatus(userId, isActive) {
+            if (confirm(`确定要${isActive ? '启用' : '禁用'}该用户吗？`)) {
+                fetch(`/Admin/ToggleUserStatus?userId=${userId}`, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            resetPagination();
+                            loadUsers();
+                        } else {
+                            alert('操作失败，请重试');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('状态切换失败:', error);
+                        alert('操作失败，请重试');
+                    });
+            }
+        }
+
+        // 重置密码
+        function resetPassword(userId) {
+            if (confirm('确定要将密码重置为123456吗？')) {
+                fetch(`/Admin/ResetPassword?userId=${userId}`, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            alert('密码已重置为123456');
+                        } else {
+                            alert('操作失败，请重试');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('密码重置失败:', error);
+                        alert('操作失败，请重试');
+                    });
+            }
+        }
+    </script>
+}

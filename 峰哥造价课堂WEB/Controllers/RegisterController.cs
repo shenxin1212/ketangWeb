@@ -115,7 +115,7 @@ namespace 峰哥造价课堂WEB.Controllers
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
                         Nickname = username,
                         Role = "User",
-                        Status = 1,
+                        Status = 0,
                         IsActive = true,
                         CreateTime = DateTime.Now,
                         UpdateTime = DateTime.Now
