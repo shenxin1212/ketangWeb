@@ -101,5 +101,6 @@ namespace 峰哥造价课堂WEB.Models
         public bool IsInfoCompleted => !string.IsNullOrEmpty(SafeUserName) && !string.IsNullOrEmpty(SafePasswordHash);
 
         public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
+
     }
 }

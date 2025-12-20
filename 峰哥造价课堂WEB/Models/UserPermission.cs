@@ -19,5 +19,8 @@ namespace 峰哥造价课堂WEB.Models
 
         // 导航属性（关联用户）
         public User User { get; set; } = null!;
+
+        // 导航属性（关联用户）
+        public Permission Permission { get; set; } = null!;
     }
 }

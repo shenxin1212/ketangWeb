@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using 峰哥造价课堂WEB.Data;
 using 峰哥造价课堂WEB.Models;
 
@@ -64,6 +65,24 @@ namespace 峰哥造价课堂WEB.Services
                 return await _context.Users.FindAsync(userId);
             }
             return null;
+        }
+
+        public async Task<bool> HasPermissionAsync(string permKey)
+        {
+            var userId = GetCurrentUserId();
+            if (userId <= 0) return false;
+
+            var user = await _context.Users
+                .Include(u => u.UserPermissions)
+                .ThenInclude(up => up.Permission)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null) return false;
+
+            // 管理员拥有所有权限
+            if (user.IsAdmin) return true;
+
+            return user.UserPermissions.Any(up => up.Permission.PermKey == permKey);
         }
     }
 }

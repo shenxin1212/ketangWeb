@@ -11,6 +11,7 @@ namespace 峰哥造价课堂WEB.Data
         public DbSet<Video> Videos { get; set; }
         public DbSet<DownloadFile> DownloadFiles { get; set; }
         public DbSet<UserPermission> UserPermissions { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -103,6 +104,13 @@ namespace 峰哥造价课堂WEB.Data
             modelBuilder.Entity<Video>().ToTable("Videos");
             modelBuilder.Entity<DownloadFile>().ToTable("DownloadFiles");
 
+            // 配置权限表
+            modelBuilder.Entity<Permission>(entity =>
+            {
+                entity.ToTable("permission");
+                entity.HasKey(p => p.Id);
+            });
+
             modelBuilder.Entity<UserPermission>(entity =>
             {
                 // 1. 配置复合主键（UserId + PermId）
@@ -113,6 +121,11 @@ namespace 峰哥造价课堂WEB.Data
                       .WithMany(u => u.UserPermissions) // 若 User 有反向导航属性
                       .HasForeignKey(up => up.UserId)  // 明确外键仅为 UserId
                       .OnDelete(DeleteBehavior.Cascade); // 根据业务设置删除行为
+
+                entity.HasOne(up => up.Permission)
+                     .WithMany()
+                     .HasForeignKey(up => up.PermId)
+                     .OnDelete(DeleteBehavior.Cascade);
 
             });
         }

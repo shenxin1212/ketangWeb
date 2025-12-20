@@ -242,5 +242,62 @@ namespace VideoManagementSystem.Controllers
                 }
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> AssignPermissions(int id)
+        {
+            var user = await _context.Users
+                .Include(u => u.UserPermissions)
+                .ThenInclude(up => up.Permission)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null) return NotFound();
+
+            // 获取所有权限和用户已拥有的权限ID
+            var allPermissions = await _context.Permissions.ToListAsync();
+            var userPermissionIds = user.UserPermissions.Select(up => up.PermId).ToList();
+
+            ViewBag.AllPermissions = allPermissions;
+            ViewBag.UserPermissionIds = userPermissionIds;
+
+            return View(user);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AssignPermissions(int userId, List<int> permissionIds)
+        {
+            var user = await _context.Users
+                .Include(u => u.UserPermissions)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null || user.UserName == "admin") return NotFound();
+
+            // 清除现有权限关联
+            user.UserPermissions.Clear();
+
+            // 添加新的权限关联
+            if (permissionIds != null && permissionIds.Any())
+            {
+                var permissions = await _context.Permissions
+                    .Where(p => permissionIds.Contains(p.Id))
+                    .ToListAsync();
+
+                foreach (var permission in permissions)
+                {
+                    user.UserPermissions.Add(new UserPermission
+                    {
+                        UserId = userId,
+                        PermId = permission.Id
+                    });
+                }
+            }
+
+            user.UpdateTime = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Users");
+        }
+
     }
 }

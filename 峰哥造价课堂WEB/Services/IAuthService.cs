@@ -7,5 +7,6 @@
         string GetCurrentUsername();
         int GetCurrentUserId();
         string GetCurrentUserNickname();
+        Task<bool> HasPermissionAsync(string permKey);
     }
 }

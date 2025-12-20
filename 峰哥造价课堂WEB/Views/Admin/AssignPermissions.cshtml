@@ -1,0 +1,22 @@
+﻿@model User
+
+<h1>为 @Model.SafeUserName 分配权限</h1>
+
+<form asp-action="AssignPermissions" asp-route-userId="@Model.Id" method="post">
+    @foreach (var perm in ViewBag.AllPermissions as List<Permission>)
+    {
+        var isChecked = (ViewBag.UserPermissionIds as List<int>).Contains(perm.Id);
+        <div class="form-check">
+            <input type="checkbox" name="permissionIds" value="@perm.Id" class="form-check-input" @(isChecked ? "checked" : "")>
+            <label class="form-check-label">
+                @perm.Name (@perm.PermKey)
+                @if (!string.IsNullOrEmpty(perm.Description))
+                {
+                    <small class="text-muted">@perm.Description</small>
+                }
+            </label>
+        </div>
+    }
+    <button type="submit" class="btn btn-primary mt-3">保存权限</button>
+    <a asp-action="Users" class="btn btn-secondary mt-3">取消</a>
+</form>

@@ -1,0 +1,33 @@
+﻿@model IEnumerable<Permission>
+
+<h1>权限管理</h1>
+<a asp-action="Create" class="btn btn-primary">添加新权限</a>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>权限标识(perm_key)</th>
+            <th>权限名称</th>
+            <th>描述</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Id</td>
+                <td>@item.PermKey</td>
+                <td>@item.Name</td>
+                <td>@item.Description</td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">编辑</a>
+                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('确定删除?')">删除</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
