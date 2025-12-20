@@ -1,4 +1,6 @@
-﻿namespace 峰哥造价课堂WEB.Services
+﻿using 峰哥造价课堂WEB.Models;
+
+namespace 峰哥造价课堂WEB.Services
 {
     public interface IAuthService
     {
@@ -8,5 +10,6 @@
         int GetCurrentUserId();
         string GetCurrentUserNickname();
         Task<bool> HasPermissionAsync(string permKey);
+        Task<User?> GetCurrentUserAsync();
     }
 }

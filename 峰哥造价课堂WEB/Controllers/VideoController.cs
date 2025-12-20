@@ -26,61 +26,86 @@ namespace 峰哥造价课堂WEB.Controllers
             try
             {
                 var currentUserRole = _authService.GetCurrentUserRole();
-                var accessibleRoles = GetAccessibleRoles(currentUserRole);
+                var user = await _authService.GetCurrentUserAsync();
 
-                // 修复LINQ查询，避免使用自定义方法
+                // 获取用户拥有的所有权限角色（包括其自身角色及可访问的角色）
+                var userAccessibleRoles = GetUserAccessibleRoles(user);
+
+                // 视频查询：公开视频或用户有权访问的角色视频
                 var videos = await _context.Videos
-                    .Where(v => v.IsPublic || accessibleRoles.Contains(v.RequiredRole))
+                    .Where(v => v.IsPublic || userAccessibleRoles.Contains(v.RequiredRole))
                     .OrderByDescending(v => v.UploadDate)
                     .ToListAsync();
 
-                ViewBag.CanUpload = currentUserRole == "Admin";
+                // 检查上传权限：管理员或拥有视频上传权限的用户
+                var canUpload = currentUserRole == "Admin" || await _authService.HasPermissionAsync("video.upload");
+                ViewBag.CanUpload = canUpload;
+
+                // 检查管理权限
+                ViewBag.CanManage = currentUserRole == "Admin" || await _authService.HasPermissionAsync("video.manage");
+
                 return View(videos);
             }
             catch (Exception ex)
             {
-                // 记录错误
                 Console.WriteLine($"Video/Index错误: {ex.Message}");
-
-                // 返回空列表
                 ViewBag.CanUpload = false;
+                ViewBag.CanManage = false;
                 return View(new List<Video>());
             }
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpGet]
-        public IActionResult Upload()
+        public async Task<IActionResult> Upload()
         {
+            // 检查上传权限
+            var currentUserRole = _authService.GetCurrentUserRole();
+            if (currentUserRole != "Admin" && !await _authService.HasPermissionAsync("video.upload"))
+            {
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
+            // 获取用户可分配的角色列表（不能超过自身角色级别）
+            var user = await _authService.GetCurrentUserAsync();
+            ViewBag.AvailableRoles = GetAssignableRoles(user.SafeRole);
+
             return View();
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Upload(IFormFile videoFile, Video video)
         {
+            // 检查上传权限
+            var currentUserRole = _authService.GetCurrentUserRole();
+            if (currentUserRole != "Admin" && !await _authService.HasPermissionAsync("video.upload"))
+            {
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
             if (videoFile == null || videoFile.Length == 0)
             {
                 ViewBag.Error = "请选择视频文件";
+                ViewBag.AvailableRoles = GetAssignableRoles(currentUserRole);
                 return View(video);
             }
 
             try
             {
-                // 验证文件类型
+                // 验证文件类型和大小（保持原有逻辑）
                 var allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv" };
                 var fileExtension = Path.GetExtension(videoFile.FileName).ToLower();
 
                 if (!allowedExtensions.Contains(fileExtension))
                 {
                     ViewBag.Error = "不支持的文件格式，请选择MP4、AVI、MOV或WMV格式";
+                    ViewBag.AvailableRoles = GetAssignableRoles(currentUserRole);
                     return View(video);
                 }
 
-                // 验证文件大小（100MB限制）
                 if (videoFile.Length > 100 * 1024 * 1024)
                 {
                     ViewBag.Error = "文件大小不能超过100MB";
+                    ViewBag.AvailableRoles = GetAssignableRoles(currentUserRole);
                     return View(video);
                 }
 
@@ -93,7 +118,16 @@ namespace 峰哥造价课堂WEB.Controllers
                 // 设置默认缩略图路径
                 if (string.IsNullOrEmpty(video.ThumbnailPath))
                 {
-                    video.ThumbnailPath = "/images/video-thumbnail.jpg"; // 默认缩略图
+                    video.ThumbnailPath = "/images/video-thumbnail.jpg";
+                }
+
+                // 验证用户是否有权限设置该RequiredRole
+                var user = await _authService.GetCurrentUserAsync();
+                var assignableRoles = GetAssignableRoles(user.SafeRole);
+                if (!assignableRoles.Contains(video.RequiredRole))
+                {
+                    // 如果用户没有权限设置该角色，则默认使用用户自身角色
+                    video.RequiredRole = user.SafeRole;
                 }
 
                 _context.Videos.Add(video);
@@ -105,20 +139,27 @@ namespace 峰哥造价课堂WEB.Controllers
             catch (Exception ex)
             {
                 ViewBag.Error = $"上传失败: {ex.Message}";
+                ViewBag.AvailableRoles = GetAssignableRoles(currentUserRole);
                 return View(video);
             }
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
+            // 检查管理权限
+            var currentUserRole = _authService.GetCurrentUserRole();
+            if (currentUserRole != "Admin" && !await _authService.HasPermissionAsync("video.manage"))
+            {
+                TempData["ErrorMessage"] = "没有删除视频的权限";
+                return RedirectToAction("Index");
+            }
+
             try
             {
                 var video = await _context.Videos.FindAsync(id);
                 if (video != null)
                 {
-                    // 删除物理文件
                     if (!string.IsNullOrEmpty(video.FilePath))
                     {
                         _fileService.DeleteFile(video.FilePath);
@@ -126,7 +167,6 @@ namespace 峰哥造价课堂WEB.Controllers
 
                     _context.Videos.Remove(video);
                     await _context.SaveChangesAsync();
-
                     TempData["SuccessMessage"] = "视频删除成功！";
                 }
                 else
@@ -153,9 +193,12 @@ namespace 峰哥造价课堂WEB.Controllers
                     return NotFound();
                 }
 
-                // 检查权限
-                var currentUserRole = _authService.GetCurrentUserRole();
-                if (!video.IsPublic && !CanUserAccessVideo(currentUserRole, video.RequiredRole))
+                // 检查权限：公开视频或用户有权访问
+                var user = await _authService.GetCurrentUserAsync();
+                var hasAccess = video.IsPublic ||
+                               HasVideoAccessPermission(user, video.RequiredRole);
+
+                if (!hasAccess)
                 {
                     return RedirectToAction("AccessDenied", "Account");
                 }
@@ -173,40 +216,83 @@ namespace 峰哥造价课堂WEB.Controllers
             }
         }
 
-        // 辅助方法：获取用户有权限的角色列表
-        private string[] GetAccessibleRoles(string userRole)
+        // 辅助方法：获取用户可访问的所有角色（基于用户角色和权限）
+        private string[] GetUserAccessibleRoles(User? user)
         {
-            var roleHierarchy = new Dictionary<string, int>
+            if (user == null)
             {
-                ["Admin"] = 3,
-                ["User"] = 2,
-                ["Guest"] = 1
-            };
+                return new[] { "Guest" };
+            }
 
-            var userRoleValue = roleHierarchy.ContainsKey(userRole) ? roleHierarchy[userRole] : 0;
+            // 结合用户权限扩展可访问角色（如果有特定权限可以访问更高角色的视频）
+            var accessibleRoles = new HashSet<string>();
+
+            var validPermissions = user.UserPermissions
+            .Where(up => up.GrantTime >= DateTime.Now) // 权限未过期（GrantTime >= 当前时间）
+            .ToList();
+
+            // 将有效的权限ID添加到可访问角色列表中
+            foreach (var perm in validPermissions)
+            {
+                accessibleRoles.Add(perm.PermId.ToString());  // 存入PermId（转为字符串，因为原列表是string类型）
+            }
+
+            return accessibleRoles.ToArray();
+        }
+
+        // 辅助方法：检查用户是否有访问该视频的权限
+        private bool HasVideoAccessPermission(User? user, string videoRequiredRole)
+        {
+            if (user == null)
+            {
+                return videoRequiredRole == "Guest";
+            }
+
+            // 管理员拥有所有权限
+            if (user.IsAdmin)
+            {
+                return true;
+            }
+
+            //// 检查用户角色是否足够
+            //var roleHierarchy = GetRoleHierarchy();
+            //if (roleHierarchy.TryGetValue(user.SafeRole, out int userRoleLevel) &&
+            //    roleHierarchy.TryGetValue(videoRequiredRole, out int requiredLevel))
+            //{
+            //    if (userRoleLevel >= requiredLevel)
+            //    {
+            //        return true;
+            //    }
+            //}
+
+            // 检查用户是否有特定权限可以访问该角色的视频
+            // 格式：video.access.{role} 例如：video.access.VIP
+            var requiredPermission = $"video.access.{videoRequiredRole.ToLower()}";
+            return user.UserPermissions.Any(up => up.Permission.PermKey == requiredPermission);
+        }
+
+        // 辅助方法：获取用户可分配的角色（不能超过自身角色级别）
+        private string[] GetAssignableRoles(string userRole)
+        {
+            var roleHierarchy = GetRoleHierarchy();
+            var userRoleLevel = roleHierarchy.TryGetValue(userRole, out int level) ? level : 0;
 
             return roleHierarchy
-                .Where(r => r.Value <= userRoleValue)
+                .Where(r => r.Value <= userRoleLevel)
                 .Select(r => r.Key)
                 .ToArray();
         }
 
-        // 辅助方法：检查用户是否可以访问视频
-        private bool CanUserAccessVideo(string userRole, string videoRequiredRole)
+        // 角色层级定义（复用逻辑，统一维护）
+        private Dictionary<string, int> GetRoleHierarchy()
         {
-            var roleHierarchy = new Dictionary<string, int>
+            return new Dictionary<string, int>
             {
                 ["Admin"] = 3,
                 ["User"] = 2,
                 ["Guest"] = 1
             };
-
-            if (roleHierarchy.ContainsKey(userRole) && roleHierarchy.ContainsKey(videoRequiredRole))
-            {
-                return roleHierarchy[userRole] >= roleHierarchy[videoRequiredRole];
-            }
-
-            return false;
         }
+
     }
 }

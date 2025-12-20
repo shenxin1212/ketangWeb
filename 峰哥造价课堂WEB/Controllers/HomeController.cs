@@ -16,13 +16,13 @@ namespace VideoManagementSystem.Controllers
             _authService = authService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             try
             {
                 // 1. 获取所有允许游客下载的文件（无需登录）
                 var publicDownloads = _context.DownloadFiles
-                    .Where(f => f.RequiredRole == "Guest") // 只筛选 Guest 可访问的文件
+                    .Where(f => f.RequiredRole == "Public") // 只筛选 Public 可访问的文件
                     .OrderByDescending(f => f.UploadDate)
                     .Take(1) // 只显示1个应用程序（可根据需求调整数量）
                     .ToList();
@@ -31,13 +31,20 @@ namespace VideoManagementSystem.Controllers
                 var currentUserRole = _authService.GetCurrentUserRole();
                 var accessibleRoles = GetAccessibleRoles(currentUserRole);
 
-                var videos = _context.Videos
-                    .Where(v => v.IsPublic || accessibleRoles.Contains(v.RequiredRole))
+                var user = await _authService.GetCurrentUserAsync();
+
+                // 获取用户拥有的所有权限角色（包括其自身角色及可访问的角色）
+                var userAccessibleRoles = GetUserAccessibleRoles(user);
+                // 视频查询：公开视频或用户有权访问的角色视频
+                var videos =  _context.Videos
+                    .Where(v => v.IsPublic || userAccessibleRoles.Contains(v.RequiredRole))
+                    .OrderByDescending(v => v.UploadDate)
                     .Take(6)
                     .ToList();
 
                 var memberFiles = _context.DownloadFiles
-                    .Where(f => accessibleRoles.Contains(f.RequiredRole) && f.RequiredRole != "Guest")
+                     .Where(v => userAccessibleRoles.Contains(v.RequiredRole))
+                    .OrderByDescending(v => v.UploadDate)
                     .Take(3)
                     .ToList();
 
@@ -78,6 +85,29 @@ namespace VideoManagementSystem.Controllers
                 .Where(r => r.Value <= userRoleValue)
                 .Select(r => r.Key)
                 .ToArray();
+        }
+
+        private string[] GetUserAccessibleRoles(User? user)
+        {
+            if (user == null)
+            {
+                return new[] { "Guest" };
+            }
+
+            // 结合用户权限扩展可访问角色（如果有特定权限可以访问更高角色的视频）
+            var accessibleRoles = new HashSet<string>();
+
+            var validPermissions = user.UserPermissions
+            .Where(up => up.GrantTime >= DateTime.Now) // 权限未过期（GrantTime >= 当前时间）
+            .ToList();
+
+            // 将有效的权限ID添加到可访问角色列表中
+            foreach (var perm in validPermissions)
+            {
+                accessibleRoles.Add(perm.PermId.ToString());  // 存入PermId（转为字符串，因为原列表是string类型）
+            }
+
+            return accessibleRoles.ToArray();
         }
 
 

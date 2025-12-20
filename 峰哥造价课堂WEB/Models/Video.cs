@@ -25,7 +25,7 @@ namespace 峰哥造价课堂WEB.Models
 
         [Required]
         [Column("required_role")]
-        public string RequiredRole { get; set; } = "User";
+        public string RequiredRole { get; set; } = "";
 
         [Column("is_public")]
         public bool IsPublic { get; set; } = false;

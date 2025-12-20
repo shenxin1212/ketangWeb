@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 添加服务到容器
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages(); // 支持 Razor Pages
 // 在builder.Services配置部分添加：
 builder.Services.AddScoped<IWeChatAuthService, WeChatAuthService>();
 
@@ -91,6 +92,10 @@ app.Use(async (context, next) =>
     }
     await next();
 });
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // 启用会话
 app.UseSession();

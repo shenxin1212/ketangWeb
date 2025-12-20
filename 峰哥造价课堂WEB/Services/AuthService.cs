@@ -62,7 +62,10 @@ namespace 峰哥造价课堂WEB.Services
             var userId = GetCurrentUserId();
             if (userId > 0)
             {
-                return await _context.Users.FindAsync(userId);
+                return await _context.Users
+                    .Include(u => u.UserPermissions)       // 加载用户-权限关联表
+                    .ThenInclude(up => up.Permission)      // 进一步加载权限详情
+                    .FirstOrDefaultAsync(u => u.Id == userId);
             }
             return null;
         }

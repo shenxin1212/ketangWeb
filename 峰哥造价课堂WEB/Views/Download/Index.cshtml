@@ -29,9 +29,6 @@
                         <p class="card-text">@file.Description</p>
 
                         <div class="mb-3">
-                            <span class="badge bg-@(file.RequiredRole == "Guest" ? "success" : file.RequiredRole == "User" ? "warning" : "danger")">
-                                @(file.RequiredRole == "Guest" ? "公开" : file.RequiredRole == "User" ? "会员" : "管理员")
-                            </span>
                             <small class="text-muted">版本: @file.Version</small>
                         </div>
 

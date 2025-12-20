@@ -30,9 +30,14 @@ namespace 峰哥造价课堂WEB.Controllers
                 var currentUserRole = _authService.GetCurrentUserRole();
                 var accessibleRoles = GetAccessibleRoles(currentUserRole);
 
+                var user = await _authService.GetCurrentUserAsync();
+
+                // 获取用户拥有的所有权限角色（包括其自身角色及可访问的角色）
+                var userAccessibleRoles = GetUserAccessibleRoles(user);
+
                 // 修复LINQ查询
                 var files = await _context.DownloadFiles
-                    .Where(f => accessibleRoles.Contains(f.RequiredRole))
+                    .Where(f => userAccessibleRoles.Contains(f.RequiredRole))
                     .OrderByDescending(f => f.UploadDate)
                     .ToListAsync();
 
@@ -233,6 +238,32 @@ namespace 峰哥造价课堂WEB.Controllers
                 "docx" => fileName + ".docx",
                 _ => fileName + ".download"
             };
+        }
+
+
+        private string[] GetUserAccessibleRoles(User? user)
+        {
+            if (user == null)
+            {
+                return new[] { "Public", "Guest" };
+            }
+
+            // 结合用户权限扩展可访问角色（如果有特定权限可以访问更高角色的视频）
+            var accessibleRoles = new HashSet<string>();
+
+            var validPermissions = user.UserPermissions
+            .Where(up => up.GrantTime >= DateTime.Now) // 权限未过期（GrantTime >= 当前时间）
+            .ToList();
+
+            // 将有效的权限ID添加到可访问角色列表中
+            foreach (var perm in validPermissions)
+            {
+                accessibleRoles.Add(perm.PermId.ToString());  // 存入PermId（转为字符串，因为原列表是string类型）
+            }
+
+            accessibleRoles.Add("Public");
+
+            return accessibleRoles.ToArray();
         }
     }
 

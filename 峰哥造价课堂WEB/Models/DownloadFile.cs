@@ -28,7 +28,7 @@ namespace 峰哥造价课堂WEB.Models
         [Required]
         [StringLength(20)]
         [Column("RequiredRole")]
-        public string RequiredRole { get; set; } = "User";
+        public string RequiredRole { get; set; } = "";
 
         [Column("UploadDate")]
         public DateTime UploadDate { get; set; } = DateTime.Now;

@@ -25,9 +25,6 @@
                         <p class="card-text">@video.Description</p>
 
                         <div class="mb-2">
-                            <span class="badge bg-@(video.RequiredRole == "Guest" ? "success" : video.RequiredRole == "User" ? "warning" : "danger")">
-                                @(video.RequiredRole == "Guest" ? "公开" : video.RequiredRole == "User" ? "会员" : "管理员")
-                            </span>
                             @if (video.IsPublic)
                             {
                                 <span class="badge bg-info">公开</span>
